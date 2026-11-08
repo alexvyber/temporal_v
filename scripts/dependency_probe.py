@@ -33,6 +33,13 @@ def main():
         target = platform.system().lower() + '-' + {'aarch64': 'arm64', 'x86_64': 'amd64'}.get(platform.machine(), platform.machine())
         manifest_path = installed / 'native/prebuilt' / target / 'manifest.json'
         manifest = json.loads(manifest_path.read_text())
+        for field, relative in (
+            ('core_source_sha256', 'locks/core-source.json'),
+            ('header_sha256', 'native/include/temporal-sdk-core-c-bridge.h'),
+            ('core_cargo_lock_sha256', 'locks/core.Cargo.lock'),
+            ('payload_cargo_lock_sha256', 'locks/payloads.Cargo.lock'),
+        ):
+            assert hashlib.sha256((installed / relative).read_bytes()).hexdigest() == manifest[field], relative
         for name, expected in manifest['files'].items():
             assert hashlib.sha256((manifest_path.parent / name).read_bytes()).hexdigest() == expected, name
         consumer = ARTIFACTS / 'external-consumer'

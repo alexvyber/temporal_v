@@ -1,4 +1,4 @@
-"""Validate the exact panic runtime and reject unknown/unfinished toolchains."""
+"""Validate the historical replay-baseline-v1 compiler, not the consumer compiler."""
 RESULT_REPORT='v-runtime-results.json'
 import hashlib
 import json

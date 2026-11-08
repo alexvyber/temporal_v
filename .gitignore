@@ -1,4 +1,3 @@
 __pycache__/
-native/lib/
 !native/prebuilt/**/*.dylib
 !native/prebuilt/**/*.so
