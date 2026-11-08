@@ -1,10 +1,10 @@
 module sdk
 
-import alexvyber.temporal_v.corebridge
+import temporal_v.corebridge
 import encoding.utf8
 import x.json2
-import alexvyber.temporal_v.protobuf
-import alexvyber.temporal_v.temporal
+import temporal_v.protobuf
+import temporal_v.temporal
 import time
 
 // Drivers must be safe for concurrent calls, preserve payload metadata, and

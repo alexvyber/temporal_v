@@ -1,10 +1,10 @@
 module main
 
-import alexvyber.temporal_v.sdk
-import alexvyber.temporal_v.temporal
-import alexvyber.temporal_v.workflows
-import alexvyber.temporal_v.example_converter
-import alexvyber.temporal_v.corebridge
+import temporal_v.sdk
+import temporal_v.temporal
+import temporal_v.workflows
+import temporal_v.example_converter
+import temporal_v.corebridge
 import time
 
 struct EagerCapture {

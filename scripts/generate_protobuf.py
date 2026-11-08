@@ -18,7 +18,7 @@ def generate(root, artifacts, check=False):
     command.append(str(root / 'schemas/sdk.proto'))
     result = subprocess.run(command, check=True, capture_output=True, text=True,
                             env=dict(os.environ, VMODULES=str(artifacts / 'vmodules')))
-    raw = result.stdout.replace('import protobuf\n', 'import alexvyber.temporal_v.protobuf\n').replace('import json2\n', 'import x.json2\n')
+    raw = result.stdout.replace('import protobuf\n', 'import temporal_v.protobuf\n').replace('import json2\n', 'import x.json2\n')
     for name in re.findall(r'^pub fn (\w+)\.decode\(', raw, re.M):
         raw += f'\npub fn (message {name}) decode_owned(data []u8) !{name} {{ return {name}.decode(data)! }}\n'
         raw += f'\npub fn (message {name}) validate_protojson(data string) ! {{ {name}.from_json(data)! }}\n'

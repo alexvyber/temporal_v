@@ -1,6 +1,6 @@
 module workflows
 
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 
 struct ArgumentsWorkflow {
 	local bool

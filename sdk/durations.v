@@ -1,6 +1,6 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 import time
 
 fn duration_proto(duration time.Duration) !temporal.GoogleProtobuf_Duration {

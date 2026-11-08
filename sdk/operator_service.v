@@ -2,7 +2,7 @@
 // Low-level calls use explicit namespace/options in their generated request.
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 pub fn (client &Client) rpc_operator_add_search_attributes(request temporal.TemporalApiOperatorserviceV1_AddSearchAttributesRequest) !temporal.TemporalApiOperatorserviceV1_AddSearchAttributesResponse {
 	return temporal.TemporalApiOperatorserviceV1_AddSearchAttributesResponse.decode(client.call(.operator,

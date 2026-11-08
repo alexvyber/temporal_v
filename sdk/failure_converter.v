@@ -1,6 +1,6 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 import x.json2
 
 // Conversion is separate from payload conversion so applications can control

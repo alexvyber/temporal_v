@@ -3,7 +3,7 @@ module main
 import flag
 import x.json2
 import os
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import time
 
 struct LongTimer {}

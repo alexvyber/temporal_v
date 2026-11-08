@@ -1,6 +1,6 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 // Codec callbacks may mutate nested fields of their local payload structs.
 // Deep snapshots preserve caller inputs and isolate retained callback buffers,

@@ -1,7 +1,7 @@
 module main
 
-import alexvyber.temporal_v.sdk
-import alexvyber.temporal_v.temporal
+import temporal_v.sdk
+import temporal_v.temporal
 
 fn test_json_payload_preserves_application_type_fields_and_numbers() ! {
 	converter := sdk.DataConverter{}

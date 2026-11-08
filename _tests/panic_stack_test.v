@@ -1,7 +1,7 @@
 module main
 
 import sync
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import time
 
 fn C.temporal_v_recovery_trace() &char

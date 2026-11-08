@@ -1,7 +1,7 @@
 module workflows
 
 import x.json2
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import time
 
 struct Parent {}

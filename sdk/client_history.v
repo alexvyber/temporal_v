@@ -1,7 +1,7 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
-import alexvyber.temporal_v.corebridge
+import temporal_v.temporal
+import temporal_v.corebridge
 
 pub struct HistoryOptions {
 pub:

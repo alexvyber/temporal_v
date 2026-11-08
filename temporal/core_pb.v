@@ -2,7 +2,7 @@
 module temporal
 
 import x.json2
-import alexvyber.temporal_v.protobuf
+import temporal_v.protobuf
 import time
 
 pub enum TemporalApiEnumsV1_EncodingType {

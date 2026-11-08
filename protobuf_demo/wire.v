@@ -1,7 +1,7 @@
 module main
 
-import alexvyber.temporal_v.temporal
-import alexvyber.temporal_v.protobuf
+import temporal_v.temporal
+import temporal_v.protobuf
 import os
 import encoding.hex
 

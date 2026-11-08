@@ -1,7 +1,7 @@
 module example_converter
 
-import alexvyber.temporal_v.sdk
-import alexvyber.temporal_v.temporal
+import temporal_v.sdk
+import temporal_v.temporal
 import os
 
 // Deliberately mutate nested fields in local structs. The SDK must isolate

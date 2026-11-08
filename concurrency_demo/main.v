@@ -1,10 +1,10 @@
 module main
 
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import os
 import time
 import x.json2
-import alexvyber.temporal_v.example_converter
+import temporal_v.example_converter
 
 struct ConcurrentWorkflow {
 mut:

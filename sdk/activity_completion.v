@@ -1,6 +1,6 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 pub struct ActivityTaskToken {
 pub:

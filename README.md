@@ -28,7 +28,7 @@ v install https://github.com/alexvyber/temporal_v
 Import the SDK in your application:
 
 ```v
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 ```
 
 Add `https://github.com/alexvyber/temporal_v` to your project's `v.mod`

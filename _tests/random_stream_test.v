@@ -1,6 +1,6 @@
 module main
 
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import x.json2
 
 fn test_named_stream_handles_share_progress_without_advancing_default_randomness() ! {

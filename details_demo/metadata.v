@@ -1,8 +1,8 @@
 module main
 
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import time
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 fn detail_map() !map[string]sdk.PayloadValue {
 	mut result := map[string]sdk.PayloadValue{}

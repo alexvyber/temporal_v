@@ -1,10 +1,10 @@
 module main
 
-import alexvyber.temporal_v.corebridge
+import temporal_v.corebridge
 import x.json2
 import math
 import os
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import time
 
 fn add_many(metric &sdk.Metric, count int) ! {

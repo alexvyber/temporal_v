@@ -2,14 +2,17 @@ FROM rust:1.99.1-bookworm@sha256:c9155318d07341301a78b45ecdd81af2e43b8b297d64e8f
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates python3 git libgc-dev libssl3 \
     && rm -rf /var/lib/apt/lists/*
-WORKDIR /sdk
-COPY . .
+WORKDIR /setup
+COPY scripts/prepare_formatter.py scripts/
+COPY locks/v-formatter.json locks/
 # Use the unmodified, source-pinned V 0.5.2 bootstrap compiler. Install its
 # ordinary GC library once, rather than requiring consumer compiler flags.
 RUN SPIKE_ARTIFACTS=/tools python3 scripts/prepare_formatter.py && \
     mkdir -p /tools/tools/v-formatter/thirdparty/tcc/lib && \
     cp "$(cc -print-file-name=libgc.a)" /tools/tools/v-formatter/thirdparty/tcc/lib/libgc.a
 ENV PATH=/tools/tools/v-formatter:$PATH V_C_ERROR_BUG_REPORT_DISABLED=1
+WORKDIR /sdk
+COPY . .
 RUN v version && v link
 WORKDIR /app
 RUN cp /sdk/examples/hello/main.v /sdk/examples/hello/v.mod . && v -o worker .

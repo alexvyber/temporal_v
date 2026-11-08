@@ -2,7 +2,7 @@ module sdk
 
 import net.urllib
 import strconv
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 import encoding.utf8
 
 const nexus_link_prefix = 'temporal.api.common.v1.Link.'

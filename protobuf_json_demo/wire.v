@@ -1,6 +1,6 @@
 module main
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 import os
 import encoding.hex
 

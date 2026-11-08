@@ -1,6 +1,6 @@
 module corebridge
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 #include "@DIR/../native/payloads.h"
 

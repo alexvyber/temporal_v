@@ -2,7 +2,7 @@ module main
 
 import os
 import time
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 
 struct Greeting {}
 

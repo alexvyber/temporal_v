@@ -10,7 +10,7 @@ import subprocess
 
 from integration import TemporalFixture, ARTIFACTS, ROOT, counts
 
-SOURCE = 'module main\nimport os\nimport time\nimport alexvyber.temporal_v.sdk\nstruct Greeting {}\nfn create(view sdk.WorkflowContextView, inputs []sdk.PayloadValue) !sdk.Workflow { return Greeting{} }\nfn (mut workflow Greeting) on_event(event sdk.Event, mut context sdk.WorkflowContext) ! {\n if event.kind == .started { context.timer(3 * time.second)! }\n if event.kind == .timer_fired { context.complete(\'"Hello"\')! }\n if event.kind == .cancel_requested { context.cancel()! }\n}\nfn main() {\n options := sdk.options_from_env() or { panic(err) }\n if os.args.len > 1 && os.args[1] == \'client\' {\n  client := sdk.connect(sdk.ClientOptions{address: options.address, namespace: options.namespace}) or { panic(err) }\n  defer { client.close() }\n  handle := client.start(sdk.WorkflowStart{workflow_id: \'normal-v-dependency\', workflow_type: \'greeting\', task_queue: options.task_queue}) or { panic(err) }\n  result := client.get_result(handle, 30000) or { panic(err) }\n  assert result.status == .completed && result.data == \'"Hello"\'\n  println(\'DEPENDENCY_OK\')\n  return\n }\n mut runtime := sdk.Runtime{}\n runtime.register(\'greeting\', create) or { panic(err) }\n sdk.run_workflows(options, runtime) or { panic(err) }\n}\n'
+SOURCE = 'module main\nimport os\nimport time\nimport temporal_v.sdk\nstruct Greeting {}\nfn create(view sdk.WorkflowContextView, inputs []sdk.PayloadValue) !sdk.Workflow { return Greeting{} }\nfn (mut workflow Greeting) on_event(event sdk.Event, mut context sdk.WorkflowContext) ! {\n if event.kind == .started { context.timer(3 * time.second)! }\n if event.kind == .timer_fired { context.complete(\'"Hello"\')! }\n if event.kind == .cancel_requested { context.cancel()! }\n}\nfn main() {\n options := sdk.options_from_env() or { panic(err) }\n if os.args.len > 1 && os.args[1] == \'client\' {\n  client := sdk.connect(sdk.ClientOptions{address: options.address, namespace: options.namespace}) or { panic(err) }\n  defer { client.close() }\n  handle := client.start(sdk.WorkflowStart{workflow_id: \'normal-v-dependency\', workflow_type: \'greeting\', task_queue: options.task_queue}) or { panic(err) }\n  result := client.get_result(handle, 30000) or { panic(err) }\n  assert result.status == .completed && result.data == \'"Hello"\'\n  println(\'DEPENDENCY_OK\')\n  return\n }\n mut runtime := sdk.Runtime{}\n runtime.register(\'greeting\', create) or { panic(err) }\n sdk.run_workflows(options, runtime) or { panic(err) }\n}\n'
 
 
 def main():
@@ -22,9 +22,9 @@ def main():
         environment = dict(os.environ, V_C_ERROR_BUG_REPORT_DISABLED='1')
         for name in ('VMODULES', 'VFLAGS', 'VEXE', 'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH'):
             environment.pop(name, None)
-        installed = Path.home() / '.vmodules/alexvyber/temporal_v'
+        installed = Path.home() / '.vmodules/temporal_v'
         if not installed.exists():
-            subprocess.run([compiler, 'link'], cwd=ROOT, env=environment, check=True)
+            raise RuntimeError('Install the dependency first: v install https://github.com/alexvyber/temporal_v')
         # Refuse to accidentally prove an unrelated installed SDK revision.
         for folder in ('sdk', 'corebridge', 'temporal', 'protobuf'):
             for path in (ROOT / folder).glob('*.v'):
@@ -77,7 +77,7 @@ def main():
                       compiler_sha256=hashlib.sha256(Path(compiler).read_bytes()).hexdigest(),
                       version=subprocess.check_output([compiler, 'version'], text=True).strip(),
                       installed_module=str(installed), native=manifest,
-                      cases=['External project imported alexvyber.temporal_v.sdk and compiled with plain v, no VMODULES, compiler flags or loader environment',
+                      cases=['External project imported temporal_v.sdk and compiled with plain v, no VMODULES, compiler flags or loader environment',
                              'V client started a workflow; SIGKILL replacement replayed its timer history and completed it once',
                              'Replacement worker drained and exited successfully on SIGTERM'])
     finally:

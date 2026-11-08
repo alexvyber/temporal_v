@@ -1,6 +1,6 @@
 module main
 
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import os
 import time
 import x.json2

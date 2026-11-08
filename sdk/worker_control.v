@@ -1,6 +1,6 @@
 module sdk
 
-import alexvyber.temporal_v.corebridge
+import temporal_v.corebridge
 import sync
 
 struct WorkerControlState {

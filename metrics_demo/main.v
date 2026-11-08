@@ -2,8 +2,8 @@ module main
 
 import math
 import os
-import alexvyber.temporal_v.sdk
-import alexvyber.temporal_v.temporal
+import temporal_v.sdk
+import temporal_v.temporal
 import time
 
 fn expect_invalid(options sdk.TelemetryOptions, expected string) ! {

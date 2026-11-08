@@ -1,6 +1,6 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 pub fn (context &NexusContext) trace_context() ?TraceContext {
 	return context.trace_current

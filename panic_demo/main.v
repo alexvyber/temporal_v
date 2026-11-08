@@ -1,11 +1,11 @@
 module main
 
-import alexvyber.temporal_v.sdk
-import alexvyber.temporal_v.temporal
+import temporal_v.sdk
+import temporal_v.temporal
 import os
 import x.json2
 import time
-import alexvyber.temporal_v.example_converter
+import temporal_v.example_converter
 
 struct PanicInput {
 	mode     string

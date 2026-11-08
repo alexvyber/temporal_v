@@ -1,7 +1,7 @@
 module sdk
 
 import math
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 import time
 
 pub struct RetryPolicy {

@@ -2,7 +2,7 @@ module sdk
 
 import encoding.base64
 import x.json2
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 struct WorkflowOperationToken {
 	version      int = 1

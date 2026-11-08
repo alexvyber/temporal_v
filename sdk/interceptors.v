@@ -1,7 +1,7 @@
 module sdk
 
-import alexvyber.temporal_v.corebridge
-import alexvyber.temporal_v.temporal
+import temporal_v.corebridge
+import temporal_v.temporal
 import time
 
 // Client interceptors run for every unary RPC, including long polls and Update waits.

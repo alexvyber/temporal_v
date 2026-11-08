@@ -1,8 +1,8 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 import x.json2
-import alexvyber.temporal_v.protobuf
+import temporal_v.protobuf
 
 // Explicit JSON retains its standard representation through converter composition.
 pub struct JsonValue {

@@ -1,10 +1,10 @@
 module main
 
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import os
-import alexvyber.temporal_v.example_interceptors
-import alexvyber.temporal_v.example_converter
-import alexvyber.temporal_v.example_activities
+import temporal_v.example_interceptors
+import temporal_v.example_converter
+import temporal_v.example_activities
 
 fn main() {
 	original := sdk.options_from_env() or {

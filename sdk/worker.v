@@ -1,8 +1,8 @@
 module sdk
 
-import alexvyber.temporal_v.corebridge
+import temporal_v.corebridge
 import os
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 import sync
 
 pub fn run_workflows(config WorkerOptions, runtime &Runtime) ! {

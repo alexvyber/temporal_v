@@ -1,6 +1,6 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 // Snapshots can be retained after a read-only callback returns.
 fn owned_workflow_info(value WorkflowInfo) WorkflowInfo {

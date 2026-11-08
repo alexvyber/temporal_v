@@ -1,7 +1,7 @@
 module sdk
 
-import alexvyber.temporal_v.corebridge
-import alexvyber.temporal_v.temporal
+import temporal_v.corebridge
+import temporal_v.temporal
 
 fn trace_rpc_service(service corebridge.RpcService) string {
 	return match service {

@@ -3,7 +3,7 @@ module sdk
 import x.json2
 import math
 import strconv
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 import time
 
 pub enum SearchAttributeType {

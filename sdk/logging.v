@@ -1,7 +1,7 @@
 module sdk
 
 import x.json2
-import alexvyber.temporal_v.corebridge
+import temporal_v.corebridge
 import time
 import os
 

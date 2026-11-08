@@ -1,10 +1,10 @@
 module main
 
-import alexvyber.temporal_v.example_converter
+import temporal_v.example_converter
 import x.json2
 import os
 import crypto.sha256
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import time
 
 struct Request {

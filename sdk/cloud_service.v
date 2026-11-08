@@ -2,7 +2,7 @@
 // Low-level calls use explicit namespace/options in their generated request.
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 pub fn (client &Client) rpc_cloud_get_current_identity(request temporal.TemporalApiCloudCloudserviceV1_GetCurrentIdentityRequest) !temporal.TemporalApiCloudCloudserviceV1_GetCurrentIdentityResponse {
 	return temporal.TemporalApiCloudCloudserviceV1_GetCurrentIdentityResponse.decode(client.call(.cloud,

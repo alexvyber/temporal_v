@@ -1,10 +1,10 @@
 module main
 
-import alexvyber.temporal_v.sdk
-import alexvyber.temporal_v.corebridge
+import temporal_v.sdk
+import temporal_v.corebridge
 import os
 import x.json2
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 import time
 
 struct TraceCase {

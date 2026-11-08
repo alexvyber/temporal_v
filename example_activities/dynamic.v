@@ -1,6 +1,6 @@
 module example_activities
 
-import alexvyber.temporal_v.sdk
+import temporal_v.sdk
 import x.json2
 
 pub fn dynamic(mut context sdk.ActivityContext, raw_arguments []sdk.RawValue) !sdk.PayloadValue {

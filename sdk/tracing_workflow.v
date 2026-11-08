@@ -1,7 +1,7 @@
 module sdk
 
 import crypto.sha256
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 // Workflow identities use a separate domain and never consume workflow RNG state.
 fn workflow_trace_child(parent TraceContext, run_id string, identity string) TraceContext {

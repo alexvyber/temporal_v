@@ -2,7 +2,7 @@
 // Low-level calls use explicit namespace/options in their generated request.
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 pub fn (client &Client) rpc_register_namespace(request temporal.TemporalApiWorkflowserviceV1_RegisterNamespaceRequest) !temporal.TemporalApiWorkflowserviceV1_RegisterNamespaceResponse {
 	return temporal.TemporalApiWorkflowserviceV1_RegisterNamespaceResponse.decode(client.call(.workflow,

@@ -1,6 +1,6 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
+import temporal_v.temporal
 
 // Dynamic validation receives owned, codec-decoded raw arguments. A named
 // handler always takes priority, including its configured payload conversion.

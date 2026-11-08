@@ -1,7 +1,7 @@
 module main
 
-import alexvyber.temporal_v.sdk
-import alexvyber.temporal_v.temporal
+import temporal_v.sdk
+import temporal_v.temporal
 
 // Exercise cardinality-changing codecs without losing inner metadata or fields.
 struct PackCodec {}

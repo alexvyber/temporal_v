@@ -2,8 +2,8 @@ module main
 
 import x.json2
 import os
-import alexvyber.temporal_v.sdk
-import alexvyber.temporal_v.temporal
+import temporal_v.sdk
+import temporal_v.temporal
 
 const configuration = '[profile.default]\naddress = "localhost:7233"\nnamespace = "file-default"\napi_key = "disposable-private-profile-key"\n[profile.default.tls]\ndisabled = true\n[profile.default.grpc_meta]\nx_file = "file"\n[profile.alternate]\nnamespace = "file-alternate"\n[profile.alternate.codec]\nendpoint = "http://codec.invalid"\nauth = "disposable-codec-auth"\n'
 

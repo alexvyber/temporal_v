@@ -1,7 +1,7 @@
 module sdk
 
-import alexvyber.temporal_v.temporal
-import alexvyber.temporal_v.corebridge
+import temporal_v.temporal
+import temporal_v.corebridge
 
 // Called immediately before submitting a completion to Core, after outbound
 // codecs and external storage. Each observer receives an independent snapshot.
