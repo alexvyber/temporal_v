@@ -1,8 +1,8 @@
 module main
 
-import sdk
-import corebridge
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.corebridge
+import alexvyber.temporal_v.temporal
 import encoding.base64
 import sync
 

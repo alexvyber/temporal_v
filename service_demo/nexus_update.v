@@ -1,7 +1,7 @@
 module main
 
-import sdk
-import json2
+import alexvyber.temporal_v.sdk
+import x.json2
 import time
 
 fn nexus_update_begin(client &sdk.Client, options sdk.WorkerOptions, label string, operation string, id string) !sdk.NexusExecutionHandle {

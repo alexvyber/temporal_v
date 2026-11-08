@@ -134,6 +134,10 @@ fn (mut run Run) poll_conditions() ! {
 			ready := run.condition_ready(condition)
 			cancelled := run.context.scope_cancelled(condition.options.scope)!
 			if ready || cancelled || condition.timed_out {
+				mut cancellation_message := ''
+				if cancelled && !ready {
+					cancellation_message = run.context.scope_cancel_reason(condition.options.scope)!
+				}
 				run.context.conditions.delete(sequence)
 				kind := if ready {
 					EventKind.condition_satisfied
@@ -147,11 +151,7 @@ fn (mut run Run) poll_conditions() ! {
 					event:     Event{
 						kind:     kind
 						sequence: sequence
-						message:  if cancelled && !ready {
-							run.context.scope_cancel_reason(condition.options.scope)!
-						} else {
-							''
-						}
+						message:  cancellation_message
 					}
 				})!
 				progress = true

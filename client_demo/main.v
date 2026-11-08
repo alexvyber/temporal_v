@@ -1,13 +1,13 @@
 module main
 
 import flag
-import json2
+import x.json2
 import os
-import sdk
-import example_interceptors
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.example_interceptors
+import alexvyber.temporal_v.temporal
 import time
-import example_converter
+import alexvyber.temporal_v.example_converter
 
 struct HistoryLink {
 	event_id           i64

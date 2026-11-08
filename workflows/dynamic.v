@@ -1,7 +1,7 @@
 module workflows
 
-import sdk
-import json2
+import alexvyber.temporal_v.sdk
+import x.json2
 
 struct DynamicInput {
 	known bool
@@ -39,17 +39,14 @@ fn (mut workflow DynamicWorkflow) on_event(event sdk.Event, mut context sdk.Work
 			workflow.state = DynamicState{
 				workflow_type: context.info().workflow_type
 			}
-			arguments := sdk.Arguments([
-				if input.fail {
-					'fail'
-				} else if input.retry {
-					'retry'
-				} else {
-					'success'
-				},
-				'dynamic 世界',
-				'third',
-			])
+			mode := if input.fail {
+				'fail'
+			} else if input.retry {
+				'retry'
+			} else {
+				'success'
+			}
+			arguments := sdk.Arguments([mode, 'dynamic 世界', 'third'])
 			if input.known {
 				workflow.remote = context.activity('v.echo', '"named"', sdk.ActivityOptions{})!
 			} else {

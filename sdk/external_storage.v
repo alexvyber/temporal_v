@@ -1,10 +1,10 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 import encoding.utf8
-import json2
-import protobuf
-import temporal
+import x.json2
+import alexvyber.temporal_v.protobuf
+import alexvyber.temporal_v.temporal
 import time
 
 // Drivers must be safe for concurrent calls, preserve payload metadata, and
@@ -85,7 +85,7 @@ pub fn new_external_storage(options ExternalStorageOptions) !&ExternalStorage {
 		if !utf8.validate_str(driver.driver_type()) || driver.driver_type().contains('\x00') {
 			return error('invalid storage driver type')
 		}
-		if name == '' || driver.driver_type() == '' || name in drivers {
+		if (name as string) == '' || driver.driver_type() == '' || name in drivers {
 			return error('invalid or duplicate storage driver')
 		}
 		drivers[name] = driver
@@ -162,7 +162,7 @@ fn parse_external_reference(payload temporal.TemporalApiCommonV1_Payload) !Exter
 			message: 'invalid driver name'
 		}
 	}
-	if name == '' {
+	if (name as string) == '' {
 		return ExternalStorageError{
 			phase:   'reference'
 			message: 'empty driver name'
@@ -241,7 +241,7 @@ fn (storage &ExternalStorage) store_payloads(values []temporal.TemporalApiCommon
 		} else if payload.encoded_size() >= storage.options.threshold_bytes {
 			name = storage.options.drivers[0].name()
 		}
-		if name == '' {
+		if (name as string) == '' {
 			continue
 		}
 		if name !in storage.drivers {

@@ -1,11 +1,11 @@
 module main
 
-import sdk
+import alexvyber.temporal_v.sdk
 import sync
 import os
 import time
 import math
-import temporal
+import alexvyber.temporal_v.temporal
 
 @[heap]
 struct RpcCount {

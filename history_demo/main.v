@@ -1,11 +1,11 @@
 module main
 
-import sdk
-import temporal
-import example_converter
-import example_storage
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
+import alexvyber.temporal_v.example_converter
+import alexvyber.temporal_v.example_storage
 import os
-import json2
+import x.json2
 import time
 
 struct RawWorkflow {

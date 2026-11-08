@@ -2,7 +2,7 @@ module sdk
 
 import strconv
 import crypto.rand as crypto_rand
-import temporal
+import alexvyber.temporal_v.temporal
 
 pub const trace_header_key = '_tracer-data'
 

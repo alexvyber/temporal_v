@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 #flag linux -rdynamic
 
@@ -65,11 +65,13 @@ fn (mut runtime Runtime) activate(activation temporal.CoresdkWorkflowActivation_
 }
 
 fn (mut runtime Runtime) activate_recovered(activation temporal.CoresdkWorkflowActivation_WorkflowActivation, options WorkerOptions, mut outcome ActivationOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -93,11 +95,13 @@ fn invoke_nexus_start(handler NexusHandler, mut context NexusContext, input stri
 }
 
 fn recover_nexus_start(handler NexusHandler, mut context NexusContext, input string, mut outcome NexusCallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -114,11 +118,13 @@ fn invoke_nexus_cancel(handler NexusCancelHandler, mut context NexusContext, tok
 }
 
 fn recover_nexus_cancel(handler NexusCancelHandler, mut context NexusContext, token string, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}

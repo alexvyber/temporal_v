@@ -24,7 +24,7 @@ struct C.SpikeMetricExportStats {
 	core_done           bool
 }
 
-fn C.spike_metric_export_new(uint, u64) &C.SpikeMetricExport
+fn C.spike_metric_export_new(u32, u64) &C.SpikeMetricExport
 fn C.spike_metric_export_abort_unclaimed(&C.SpikeMetricExport)
 fn C.spike_metric_export_mark_dispatcher(&C.SpikeMetricExport)
 fn C.spike_metric_export_on_dispatcher(&C.SpikeMetricExport) bool
@@ -40,13 +40,13 @@ fn C.spike_metric_point_unit(&C.SpikeMetricPoint) C.TemporalCoreByteArrayRef
 fn C.spike_metric_point_integer(&C.SpikeMetricPoint) u64
 fn C.spike_metric_point_signed(&C.SpikeMetricPoint) i64
 fn C.spike_metric_point_float(&C.SpikeMetricPoint) f64
-fn C.spike_metric_point_attribute_count(&C.SpikeMetricPoint) uint
-fn C.spike_metric_point_attribute_key(&C.SpikeMetricPoint, uint) C.TemporalCoreByteArrayRef
-fn C.spike_metric_point_attribute_type(&C.SpikeMetricPoint, uint) u32
-fn C.spike_metric_point_attribute_string(&C.SpikeMetricPoint, uint) C.TemporalCoreByteArrayRef
-fn C.spike_metric_point_attribute_integer(&C.SpikeMetricPoint, uint) i64
-fn C.spike_metric_point_attribute_float(&C.SpikeMetricPoint, uint) f64
-fn C.spike_metric_point_attribute_bool(&C.SpikeMetricPoint, uint) bool
+fn C.spike_metric_point_attribute_count(&C.SpikeMetricPoint) u32
+fn C.spike_metric_point_attribute_key(&C.SpikeMetricPoint, u32) C.TemporalCoreByteArrayRef
+fn C.spike_metric_point_attribute_type(&C.SpikeMetricPoint, u32) u32
+fn C.spike_metric_point_attribute_string(&C.SpikeMetricPoint, u32) C.TemporalCoreByteArrayRef
+fn C.spike_metric_point_attribute_integer(&C.SpikeMetricPoint, u32) i64
+fn C.spike_metric_point_attribute_float(&C.SpikeMetricPoint, u32) f64
+fn C.spike_metric_point_attribute_bool(&C.SpikeMetricPoint, u32) bool
 
 pub struct MetricExportStats {
 pub:
@@ -101,7 +101,7 @@ pub fn new_metric_export_bridge(max_pending int, max_bytes u64) !&MetricExportBr
 	if max_pending < 1 || max_bytes < 1 {
 		return error('custom metric export limits must be positive')
 	}
-	native := C.spike_metric_export_new(uint(max_pending), max_bytes)
+	native := C.spike_metric_export_new(u32(max_pending), max_bytes)
 	if isnil(native) { return error('custom metric export allocation failed') }
 	return &MetricExportBridge{
 		state: &MetricExportState{
@@ -265,7 +265,7 @@ pub fn (point &MetricExportPoint) snapshot() !ExportPointSnapshot {
 	if count > 2147483647 { return error('too many custom metric attributes') }
 	mut attributes := []ExportAttribute{}
 	for index in 0 .. int(count) {
-		position := uint(index)
+		position := u32(index)
 		name := export_text(C.spike_metric_point_attribute_key(native, position))!
 		kind := C.spike_metric_point_attribute_type(native, position)
 		attribute := match kind {

@@ -1,6 +1,6 @@
 module main
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 fn test_temporal_nested_failure_matches_wire_bytes() ! {
 	mut child := temporal.TemporalApiFailureV1_Failure{

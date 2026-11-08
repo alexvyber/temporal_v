@@ -1,7 +1,7 @@
 module sdk
 
-import corebridge
-import temporal
+import alexvyber.temporal_v.corebridge
+import alexvyber.temporal_v.temporal
 import time
 
 pub type ActivityHandler = fn (mut context ActivityContext, arguments []string) !PayloadValue
@@ -312,40 +312,7 @@ fn serve_activities(connection &corebridge.Connection, config WorkerOptions, act
 				else {}
 			}
 		}
-		for !stopped || active.len > 0 {
-			select {
-				task := <-tasks {
-					if task.bytes.len == 0 || task.message != '' {
-						stopped = true
-						continue
-					}
-					pending := temporal.CoresdkActivityTask_ActivityTask.decode(task.bytes) or {
-						continue
-					}
-					pending_variant := pending.variant or { continue }
-					if pending_variant is temporal.CoresdkActivityTask_ActivityTask_Start_Case {
-						connection.complete(temporal.Coresdk_ActivityTaskCompletion{
-							task_token: pending.task_token
-							result:     activity_error(error('worker stopped before Activity dispatch'),
-								config.data_converter)
-						}.encode(), false) or {
-							emit_log(config.logger, .error,
-								'Activity drain rejection failed: ${err.msg()}')
-						}
-					}
-				}
-				result := <-results {
-					active.delete(result.token.hex())
-					connection.complete(temporal.Coresdk_ActivityTaskCompletion{
-						task_token: result.token
-						result:     result.result
-					}.encode(), false) or {
-						emit_log(config.logger, .error,
-							'Activity drain completion failed: ${err.msg()}')
-					}
-				}
-			}
-		}
+		drain_activity_tasks(connection, config, tasks, results, stopped, mut active)
 		poller.wait()
 	}
 	emit_log(config.logger, .info,
@@ -506,4 +473,42 @@ pub fn (context &ActivityContext) typed_input_values() ![]PayloadValue {
 		result << clone_payload_value(value)
 	}
 	return result
+}
+
+fn drain_activity_tasks(connection &corebridge.Connection, config WorkerOptions, tasks chan PollResult, results chan ActivityResult, initial_stopped bool, mut active map[string]chan ActivityCancelInfo) {
+	mut stopped := initial_stopped
+	for !stopped || active.len > 0 {
+		select {
+			task := <-tasks {
+				if task.bytes.len == 0 || task.message != '' {
+					stopped = true
+					continue
+				}
+				pending := temporal.CoresdkActivityTask_ActivityTask.decode(task.bytes) or {
+					continue
+				}
+				pending_variant := pending.variant or { continue }
+				if pending_variant is temporal.CoresdkActivityTask_ActivityTask_Start_Case {
+					connection.complete(temporal.Coresdk_ActivityTaskCompletion{
+						task_token: pending.task_token
+						result:     activity_error(error('worker stopped before Activity dispatch'),
+							config.data_converter)
+					}.encode(), false) or {
+						emit_log(config.logger, .error,
+							'Activity drain rejection failed: ${err.msg()}')
+					}
+				}
+			}
+			result := <-results {
+				active.delete(result.token.hex())
+				connection.complete(temporal.Coresdk_ActivityTaskCompletion{
+					task_token: result.token
+					result:     result.result
+				}.encode(), false) or {
+					emit_log(config.logger, .error,
+						'Activity drain completion failed: ${err.msg()}')
+				}
+			}
+		}
+	}
 }

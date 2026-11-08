@@ -1,13 +1,13 @@
 module main
 
 import flag
-import json2
+import x.json2
 import os
-import sdk
-import example_interceptors
-import example_converter
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.example_interceptors
+import alexvyber.temporal_v.example_converter
 import time
-import workflows
+import alexvyber.temporal_v.workflows
 
 struct WrongWorkflow {}
 

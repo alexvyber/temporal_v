@@ -1,7 +1,7 @@
 module sdk
 
-import temporal
-import corebridge
+import alexvyber.temporal_v.temporal
+import alexvyber.temporal_v.corebridge
 
 pub struct HistoryOptions {
 pub:
@@ -56,7 +56,7 @@ pub fn (client &Client) history(handle WorkflowHandle) !temporal.TemporalApiHist
 		if page.next_page_token == token {
 			return error('server returned repeated history page token')
 		}
-		token = page.next_page_token
+		token = page.next_page_token.clone()
 	}
 	return result
 }

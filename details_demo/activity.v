@@ -1,8 +1,8 @@
 module main
 
-import sdk
+import alexvyber.temporal_v.sdk
 import os
-import json2
+import x.json2
 import time
 
 fn fail_details(mut context sdk.ActivityContext, input []string) !sdk.PayloadValue {

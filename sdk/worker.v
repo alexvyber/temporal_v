@@ -1,8 +1,8 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 import os
-import temporal
+import alexvyber.temporal_v.temporal
 import sync
 
 pub fn run_workflows(config WorkerOptions, runtime &Runtime) ! {
@@ -171,7 +171,7 @@ fn complete_stored_activation(connection &corebridge.Connection, bytes []u8, act
 		results <- err.msg()
 		return
 	}
-	mut output := bytes
+	mut output := bytes.clone()
 	if status := completion.status {
 		if status is temporal.CoresdkWorkflowCompletion_WorkflowActivationCompletion_Successful_Case {
 			commands := store_workflow_commands(status.value.commands, activation, converter,
@@ -252,7 +252,9 @@ fn execute_workflow_activation(connection &corebridge.Connection, config WorkerO
 				config.worker_interceptors, config.logger, completed)
 			message := <-completed
 			mut fatal := ?IError(none)
-			if err is WorkerInterceptorError { fatal = err }
+			if err is WorkerInterceptorError { fatal = WorkerInterceptorError{
+					...err
+				} }
 			results <- WorkflowActivationResult{
 				run_id:  activation.run_id
 				message: if fatal != none {

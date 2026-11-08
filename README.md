@@ -15,7 +15,38 @@ V owns workflow state and decisions. Workers contain no TypeScript, Bun or Go SD
 **Full production parity is still in progress.** See [PROGRESS.md](PROGRESS.md) for
 implemented scenarios, evidence, and remaining release requirements.
 
-## Build and verify
+## Install in your V project
+
+Requires V 0.5.2 or later and a working C compiler. The repository includes
+native libraries for macOS arm64 and Linux amd64/arm64 (glibc 2.36 or newer).
+Consumers do not need Rust, Python, a custom V compiler, or `VMODULES` settings.
+
+```sh
+v install https://github.com/alexvyber/temporal_v
+```
+
+Import the SDK in your application:
+
+```v
+import alexvyber.temporal_v.sdk
+```
+
+Add `https://github.com/alexvyber/temporal_v` to your project's `v.mod`
+`dependencies` list. Build your application with `v .` as usual. No SDK-specific
+compiler or linker flags are needed. Register your own workflows and Activities
+and call `sdk.run_worker(...)` or `sdk.run_workflows(...)`.
+
+Typed protobuf helpers work with the bundled generated messages. For custom
+message types on V 0.5.2, supply the instance methods `decode_owned([]u8) !YourType`
+and `validate_protojson(string) !` alongside `encode()` / `json()`; its compiler
+cannot resolve generic static decoder calls across installed modules.
+
+On released V 0.5.2, a panic exits the worker process; returned `!` errors retain
+normal SDK error handling. Run workers under a supervisor. Current upstream V
+with native panic recovery isolates covered callbacks; recovered stack traces
+identify the recovery boundary, not the discarded original panic-site frames.
+
+## SDK development and verification
 
 ```sh
 bash scripts/bootstrap.sh
@@ -837,10 +868,12 @@ Concurrent result waits balance automatic time-skipping locks. `WorkerControl`
 shuts down a worker group programmatically. The test environment owns the server
 and client, while application code owns worker shutdown.
 
-`scripts/package_sdk.py` creates a local development package containing V modules,
-generated schemas, protobuf runtime, vendored header and native library, with
-checksums. `package_probe.py` compiles a separate consumer without custom link or
-include flags and exercises it against Temporal. This is not a published release.
+The installed module includes generated schemas, the hardened protobuf runtime,
+Core headers and native libraries. `scripts/dependency_probe.py` compiles a
+separate application using plain `v`, without `VMODULES` or custom flags, and
+checks execution and restart replay against Temporal. Maintainers prepare native
+builds with `scripts/build_native.sh` / `Dockerfile.native` and record them with
+`scripts/prepare_native_release.py`; consumers use `v install`.
 
 ## Pinned inputs
 
@@ -1595,12 +1628,13 @@ The sampling candidate has a pinned 19,020-case Go OpenTelemetry 1.43 oracle,
 including exact ratio boundaries and parent policies. Full aggregate and Linux
 validation remain pending.
 
-Application callback panic handling uses the pinned V compiler's native
-`recover()` and runs pending deferred cleanup. Workflow factories, event and
+On current upstream V, application callback panic handling uses native
+`recover()` and runs pending deferred cleanup. Released V 0.5.2 has no panic
+recovery and exits the process on a panic; returned errors remain supported. Workflow factories, event and
 command interceptors, query handlers, Update validators/handlers, Activity
 handlers/interceptors and Nexus start/cancellation handlers are covered.
-`PanicError` retains the panic message and original native stack captured by the
-pinned V runtime before unwinding. Native faults and callbacks that never return require
+`PanicError` retains the panic message and an SDK-owned recovery-boundary stack.
+The SDK does not patch the consumer compiler. Native faults and callbacks that never return require
 process supervision.
 
 `WorkerOptions.workflow_panic_policy` defaults to `.block_workflow`: the failed
@@ -1715,20 +1749,14 @@ handler with an empty name. Empty or duplicate named registrations are rejected.
 
 ## Recovered panic stacks
 
-The pinned V compiler requires the maintained runtime extension in
-`patches/v-panic-stack.patch`. Bootstrap applies it to the exact upstream runtime
-and rebuilds the SDK-owned compiler. Build preflight verifies the runtime hash
-and compiler receipt; unknown sources and unsuccessful rebuilds fail explicitly.
-The development package carries the same patch, lock and setup tool.
+Current SDK consumers use unmodified V. Released V 0.5.2 terminates the worker on
+panic. Upstream V with native `recover()` isolates the documented callback
+boundaries and captures up to 64 surviving recovery-boundary frames, bounded to
+16 KiB. These traces are explicitly labelled and do not claim to contain the
+original panic-site stack. Failure conversion and tracing preserve them.
 
-Recovered `PanicError.stack_trace` contains up to 64 original native frames,
-bounded to 16 KiB, captured before V unwinds callback frames. Workflow-task,
-workflow-execution, Activity, query, Update validator and Nexus handler failures
-preserve that trace. Failure converters can protect it through encoded common
-attributes; tracing emits it as `exception.stacktrace`. Native symbol availability
-and optimization control frame names; inlined calls need not appear, and these
-traces do not promise source file/line information. Native faults and callbacks
-that never return remain outside panic recovery.
+The frozen `replay-baseline-v1` fixture still requires its historical compiler
+and panic-stack extension; this is test infrastructure, not an SDK dependency.
 
 `context.force_task_fail(cause)` explicitly retries the current workflow task.
 Its first request wins over later callback errors, panics and queued completion,
@@ -2005,7 +2033,7 @@ Callbacks may be shared across workers and must synchronize their own state.
 Shutdown notifications run in registration order after polling and handlers drain,
 before the Core owner closes. They receive role, replay status, namespace and task
 queue. Hook panics are logged and isolated so remaining notifications and cleanup
-continue; middleware panics become `PanicError` with the original native stack.
+continue; middleware panics become `PanicError` with a recovery-boundary stack.
 A worker that is short-circuited or fails before Core construction has no shutdown
 notification. OS kill cannot run middleware cleanup. Worker activation inspection is described below.
 
@@ -2030,7 +2058,7 @@ an additional codec-only traversal; codecs must be deterministic and thread safe
 
 An activation observer error or panic stops the worker, drains its handlers and
 returns `WorkerInterceptorError` with phase `activation` and the original typed
-cause. Panic causes include the original native stack. Later activation observers
+cause. Panic causes include a recovery-boundary stack. Later activation observers
 are skipped. Payload preparation failures fail the affected workflow task so a
 configuration repair can retry it. Completion observers still run when the failed
 completion is submitted. The interfaces also apply during offline/batch replay.

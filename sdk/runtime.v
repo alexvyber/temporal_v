@@ -1,8 +1,8 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 import time
-import json2
+import x.json2
 
 @[heap]
 struct Run {
@@ -139,7 +139,8 @@ fn (mut runtime Runtime) activate_callback(activation temporal.CoresdkWorkflowAc
 		existing.context.target_worker_deployment_version_changed = activation.target_worker_deployment_version_changed
 		existing.context.replaying = activation.is_replaying
 		existing.context.replaying_history = replaying_history
-		existing.context.metric_replay.set(replaying_history)
+		mut metric_replay := existing.context.metric_replay
+		metric_replay.set(replaying_history)
 		existing.context.history_length = activation.history_length
 		existing.context.history_size_bytes = activation.history_size_bytes
 		existing.context.continue_as_new_suggested = activation.continue_as_new_suggested

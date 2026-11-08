@@ -1,8 +1,8 @@
 module workflows
 
-import sdk
+import alexvyber.temporal_v.sdk
 import time
-import json2
+import x.json2
 
 struct ClockSnapshot {
 pub:

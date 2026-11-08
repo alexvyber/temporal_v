@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 // Compatibility sets are the service's legacy build-ID versioning protocol.
 // The namespace must explicitly enable the corresponding server APIs.

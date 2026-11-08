@@ -1,7 +1,7 @@
 module example_activities
 
-import json2
-import sdk
+import x.json2
+import alexvyber.temporal_v.sdk
 import time
 import os
 

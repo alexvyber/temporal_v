@@ -1,8 +1,8 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 import encoding.utf8
-import json2
+import x.json2
 import net.urllib
 import os
 

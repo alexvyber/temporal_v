@@ -25,7 +25,7 @@ fn C.spike_metric_meter_open(&C.SpikeCore) &C.SpikeMetricMeter
 fn C.spike_metric_meter_close(&C.SpikeMetricMeter)
 fn C.spike_metric_new(&C.SpikeMetricMeter, &char, &char, &char, i32) &C.TemporalCoreMetric
 fn C.spike_metric_free(&C.TemporalCoreMetric)
-fn C.spike_metric_record(&C.SpikeMetricMeter, &C.TemporalCoreMetric, i32, i32, u64, i64, f64, &C.SpikeMetricAttribute, uint) int
+fn C.spike_metric_record(&C.SpikeMetricMeter, &C.TemporalCoreMetric, i32, i32, u64, i64, f64, &C.SpikeMetricAttribute, u32) int
 
 pub type MetricAttribute = bool | f64 | i64 | string
 
@@ -289,7 +289,7 @@ fn (metric &Metric) record(value_kind i32, integer_value u64, signed_value i64, 
 	if !compatible { return error('metric value type does not match instrument kind') }
 	if suppress || isnil(owner.native) { return }
 	result := C.spike_metric_record(owner.native, metric.state.native, i32(metric.state.kind),
-		value_kind, integer_value, signed_value, float_value, native.data, uint(native.len))
+		value_kind, integer_value, signed_value, float_value, native.data, u32(native.len))
 	if result == -2 { return error('metric value type does not match instrument kind') }
 	if result != 0 { return error('metric attribute allocation failed') }
 }

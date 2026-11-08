@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 import encoding.utf8
 
 // A concrete generated type validates canonical protobuf JSON in both directions.

@@ -13,6 +13,7 @@ COPY locks/test-server.json locks/v-formatter.json locks/
 COPY patches/oneof-case-names.patch patches/v-panic-stack.patch patches/
 COPY locks/v-runtime.json locks/v-runtime.json
 RUN bash scripts/bootstrap.sh
+ENV PATH=/build/artifacts/tools/v:$PATH
 
 FROM toolchain AS build
 ARG TARGETARCH

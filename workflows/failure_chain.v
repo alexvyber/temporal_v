@@ -1,9 +1,9 @@
 module workflows
 
-import sdk
-import json2
+import alexvyber.temporal_v.sdk
+import x.json2
 import crypto.sha256
-import example_activities
+import alexvyber.temporal_v.example_activities
 
 struct FailureChainWorkflow {
 	local bool

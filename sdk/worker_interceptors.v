@@ -132,11 +132,13 @@ fn run_worker_interceptors(setup WorkerSetup) ! {
 }
 
 fn recover_worker_run(setup WorkerSetup, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -161,11 +163,13 @@ fn replay_worker_interceptors(setup ReplaySetup, history []u8) !ReplayResult {
 }
 
 fn recover_worker_replay(setup ReplaySetup, history []u8, mut outcome WorkerReplayOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -190,11 +194,13 @@ fn notify_worker_shutdown(interceptors []WorkerInterceptor, info WorkerShutdownI
 }
 
 fn recover_worker_shutdown(interceptor WorkerShutdownInterceptor, info WorkerShutdownInfo, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -204,8 +210,10 @@ fn recover_worker_shutdown(interceptor WorkerShutdownInterceptor, info WorkerShu
 // Logging is another user callback; it cannot interrupt the remaining shutdown
 // notifications or connection cleanup.
 fn log_worker_interceptor_failure(logger Logger, phase string, failure IError) {
-	defer {
-		if message := recover() { _ = message }
+	$if v3_backend ? {
+		defer {
+			if message := recover() { _ = message }
+		}
 	}
 	emit_log(logger, .error,
 		'WORKER_INTERCEPTOR_FAILED phase=${phase} message=${protocol_text(failure.msg())}')

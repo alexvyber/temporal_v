@@ -1,8 +1,8 @@
 module main
 
-import sdk
+import alexvyber.temporal_v.sdk
 import os
-import json2
+import x.json2
 
 fn check_panic_responses(options sdk.WorkerOptions, converter sdk.DataConverter) ! {
 	client := sdk.connect(sdk.ClientOptions{ address: options.address, data_converter: converter })!

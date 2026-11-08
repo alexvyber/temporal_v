@@ -1,7 +1,7 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import time
 
 fn lifecycle_calls(client &sdk.Client, options sdk.WorkerOptions) ![]string {

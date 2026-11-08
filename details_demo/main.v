@@ -1,10 +1,10 @@
 module main
 
-import sdk
-import temporal
-import example_converter
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
+import alexvyber.temporal_v.example_converter
 import os
-import json2
+import x.json2
 import time
 
 fn base_converter() !sdk.DataConverter {

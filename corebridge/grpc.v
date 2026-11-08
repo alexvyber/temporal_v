@@ -36,7 +36,7 @@ struct C.TemporalCoreClientGrpcOverrideResponse {
 	fail_details  C.TemporalCoreByteArrayRef
 }
 
-fn C.spike_grpc_bridge_new(uint, u64) &C.SpikeGrpcBridge
+fn C.spike_grpc_bridge_new(u32, u64) &C.SpikeGrpcBridge
 fn C.spike_grpc_bridge_release_owner(&C.SpikeGrpcBridge)
 fn C.spike_grpc_bridge_abort_unclaimed(&C.SpikeGrpcBridge)
 fn C.spike_grpc_bridge_poll(&C.SpikeGrpcBridge, u32, u32) &C.SpikeGrpcRequest
@@ -103,7 +103,7 @@ pub fn new_grpc_bridge(max_pending int, max_pending_bytes u64) !&GrpcBridge {
 	if max_pending < 1 || max_pending_bytes < 1 {
 		return error('custom gRPC pending limits must be positive')
 	}
-	native := C.spike_grpc_bridge_new(uint(max_pending), max_pending_bytes)
+	native := C.spike_grpc_bridge_new(u32(max_pending), max_pending_bytes)
 	if isnil(native) { return error('custom gRPC bridge allocation failed') }
 	return &GrpcBridge{
 		state: &GrpcBridgeState{
@@ -301,19 +301,19 @@ pub fn (event &GrpcEvent) respond(reply GrpcReply) ! {
 		status_code:   i32(reply.status)
 		headers:       C.TemporalCoreByteArrayRefArray{
 			data: values.data
-			size: uint(values.len)
+			size: u32(values.len)
 		}
 		success_proto: C.TemporalCoreByteArrayRef{
 			data: reply.body.data
-			size: uint(reply.body.len)
+			size: u32(reply.body.len)
 		}
 		fail_message:  C.TemporalCoreByteArrayRef{
 			data: reply.message.str
-			size: uint(reply.message.len)
+			size: u32(reply.message.len)
 		}
 		fail_details:  C.TemporalCoreByteArrayRef{
 			data: reply.details.data
-			size: uint(reply.details.len)
+			size: u32(reply.details.len)
 		}
 	}
 	mut state := event.state

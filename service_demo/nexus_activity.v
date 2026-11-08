@@ -1,9 +1,9 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import time
-import json2
+import x.json2
 import os
 
 fn backing_activity(client &sdk.Client, operation sdk.NexusExecutionHandle) !sdk.StandaloneActivityHandle {

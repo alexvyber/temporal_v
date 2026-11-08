@@ -1,9 +1,9 @@
 module main
 
-import sdk
-import json2
+import alexvyber.temporal_v.sdk
+import x.json2
 import os
-import temporal
+import alexvyber.temporal_v.temporal
 import time
 
 fn wait_standalone(client &sdk.Client, handle sdk.StandaloneActivityHandle, paused bool) !sdk.StandaloneActivityDescription {

@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 // The concrete generated message type validates bytes in both directions.
 // A name is optional because Rust's ProstSerializable omits messageType metadata.

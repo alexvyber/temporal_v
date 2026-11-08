@@ -1,6 +1,6 @@
 module main
 
-import sdk
+import alexvyber.temporal_v.sdk
 
 fn dynamic_validation_activity(mut context sdk.ActivityContext, arguments []sdk.RawValue) !sdk.PayloadValue {
 	return 'null'

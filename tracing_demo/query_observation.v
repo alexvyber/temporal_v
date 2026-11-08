@@ -1,10 +1,10 @@
 module main
 
-import sdk
-import example_converter
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.example_converter
+import alexvyber.temporal_v.temporal
 import os
-import json2
+import x.json2
 import time
 
 struct QueryObservationWorkflow {

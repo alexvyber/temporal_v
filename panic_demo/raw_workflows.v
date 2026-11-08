@@ -1,7 +1,7 @@
 module main
 
-import sdk
-import json2
+import alexvyber.temporal_v.sdk
+import x.json2
 import crypto.sha256
 
 struct RawStartWorkflow {

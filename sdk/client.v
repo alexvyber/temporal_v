@@ -1,8 +1,8 @@
 module sdk
 
-import corebridge
-import json2
-import temporal
+import alexvyber.temporal_v.corebridge
+import x.json2
+import alexvyber.temporal_v.temporal
 import time
 
 pub struct ClientOptions {
@@ -341,7 +341,7 @@ pub fn (client &Client) get_result(handle WorkflowHandle, wait_timeout_millis u3
 		if propagated := response.propagated_nexus_serialization_context {
 			result_converter = result_converter.with_result_context(propagated)
 		}
-		page_token = response.next_page_token
+		page_token = response.next_page_token.clone()
 		if history := response.history {
 			for event in history.events {
 				if event.event_type !in [.event_type_workflow_execution_completed,
@@ -355,6 +355,7 @@ pub fn (client &Client) get_result(handle WorkflowHandle, wait_timeout_millis u3
 			}
 		}
 	}
+	return error('workflow result polling stopped unexpectedly')
 }
 
 fn closed_result(event temporal.TemporalApiHistoryV1_HistoryEvent, converter DataConverter) !WorkflowResult {

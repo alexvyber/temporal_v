@@ -1,6 +1,6 @@
 module main
 
-import sdk
+import alexvyber.temporal_v.sdk
 import os
 
 struct StorageParent {}

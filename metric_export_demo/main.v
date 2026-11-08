@@ -1,12 +1,12 @@
 module main
 
-import sdk
-import corebridge
-import json2
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.corebridge
+import x.json2
 import os
 import sync
 import time
-import temporal
+import alexvyber.temporal_v.temporal
 
 type CloseAction = fn ()
 

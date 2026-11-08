@@ -1,7 +1,7 @@
 module sdk
 
-import corebridge
-import temporal
+import alexvyber.temporal_v.corebridge
+import alexvyber.temporal_v.temporal
 import time
 
 pub struct ReplayOptions {
@@ -60,21 +60,7 @@ fn (runtime &Runtime) replay_configured(history []u8, options ReplayOptions) !Re
 		guard.wait()
 		connection.shutdown()
 		// Acknowledge pending evictions before finalizing Core, including failures.
-		for {
-			bytes := connection.poll(true) or { break }
-			if bytes.len == 0 {
-				break
-			}
-			activation := temporal.CoresdkWorkflowActivation_WorkflowActivation.decode(bytes) or {
-				break
-			}
-			complete_replay_activation(connection, temporal.CoresdkWorkflowCompletion_WorkflowActivationCompletion{
-				run_id: activation.run_id
-				status: temporal.CoresdkWorkflowCompletion_WorkflowActivationCompletion_Successful_Case{
-					value: temporal.CoresdkWorkflowCompletion_Success{}
-				}
-			}.encode(), options) or { break }
-		}
+		drain_replay_activations(connection, options)
 		notify_worker_shutdown(options.worker_interceptors, WorkerShutdownInfo{
 			role:       .workflow
 			replaying:  true
@@ -161,4 +147,22 @@ fn (runtime &Runtime) replay_configured(history []u8, options ReplayOptions) !Re
 		}
 	}
 	return error('unreachable replay state')
+}
+
+fn drain_replay_activations(connection &corebridge.Connection, options ReplayOptions) {
+	for {
+		bytes := connection.poll(true) or { break }
+		if bytes.len == 0 {
+			break
+		}
+		activation := temporal.CoresdkWorkflowActivation_WorkflowActivation.decode(bytes) or {
+			break
+		}
+		complete_replay_activation(connection, temporal.CoresdkWorkflowCompletion_WorkflowActivationCompletion{
+			run_id: activation.run_id
+			status: temporal.CoresdkWorkflowCompletion_WorkflowActivationCompletion_Successful_Case{
+				value: temporal.CoresdkWorkflowCompletion_Success{}
+			}
+		}.encode(), options) or { break }
+	}
 }

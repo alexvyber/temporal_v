@@ -1,7 +1,7 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 
 // Framing and context binding for tests, not encryption.
 fn scope_key(context sdk.SerializationContext) string {

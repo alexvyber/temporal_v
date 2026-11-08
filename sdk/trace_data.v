@@ -1,6 +1,6 @@
 module sdk
 
-import json2
+import x.json2
 import encoding.utf8
 
 pub struct TraceStringArray {

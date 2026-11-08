@@ -1,8 +1,8 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 import encoding.base64
-import json2
+import x.json2
 
 struct ActivityOperationToken {
 	version     int    = 1

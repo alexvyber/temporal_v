@@ -1,11 +1,11 @@
 module main
 
-import corebridge
-import json2
+import alexvyber.temporal_v.corebridge
+import x.json2
 import math
 import os
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import time
 
 struct CallResult {

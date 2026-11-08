@@ -10,7 +10,7 @@ fn protocol_text(value string) string {
 	mut result := strings.new_builder(value.len)
 	mut offset := 0
 	for offset < value.len {
-		_, size := utf8.decode_rune_at(value, offset)
+		_, size := baggage_decode_rune_at(value, offset)
 		if size == 1 && value[offset] >= 128 {
 			result.write_string('\\x' + value[offset].hex())
 		} else {

@@ -1,9 +1,9 @@
 module main
 
-import sdk
+import alexvyber.temporal_v.sdk
 import os
 import time
-import json2
+import x.json2
 import crypto.rand as crypto_rand
 
 struct Input {

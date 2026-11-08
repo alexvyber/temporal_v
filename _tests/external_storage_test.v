@@ -1,7 +1,7 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import sync
 import time
 
@@ -66,7 +66,7 @@ fn decode_reference(converter sdk.DataConverter, results chan bool) {
 		results <- false
 		return
 	}
-	results <- values == ['42']
+	results <- (values == ['42'])
 }
 
 fn test_external_reference_retrieval_limits_and_permit_recovery() ! {

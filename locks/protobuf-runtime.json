@@ -1,0 +1,13 @@
+{
+  "source": "https://github.com/we-be/protobuf.v",
+  "revision": "64811280130b2b4bda45eba707512412ace968ad",
+  "hardening_lock": "locks/protobuf-hardening.json",
+  "files": {
+    "protobuf/LICENSE": "8b72f9364f52000c4883a9957e670f143e963e34e1ab970a83c961cd9f3cd475",
+    "protobuf/decoder.v": "4f3b15c281f7cde603e24bf1322e6aa08b0e36d18341438ab479babea9d44ad2",
+    "protobuf/encoder.v": "8876cc983c8bb4c4f44d19a338a2ba271cef39bbca97c96c0c94128af43e0e54",
+    "protobuf/json_util.v": "e039920b54afbeb3a6a25b97efa9c459f480ea993a85b7c4cb3de4e5bba2adb3",
+    "protobuf/size.v": "10aecfa62f9a84394123a629047d742e16d0f1f445a4db5d39b8c94cfd42cfc1",
+    "protobuf/wire.v": "15ef2e3418d6775fedf92b529f10ac73801f182a7824e8705703285b0840a9b4"
+  }
+}

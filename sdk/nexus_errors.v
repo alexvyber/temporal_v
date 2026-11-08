@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 pub enum NexusHandlerErrorKind {
 	bad_request
@@ -43,7 +43,9 @@ pub fn (err NexusHandlerError) code() int {
 
 fn nexus_error_status(err IError) temporal.CoresdkNexus_NexusTaskCompletion_Status {
 	failure := if err is NexusHandlerError {
-		err
+		NexusHandlerError{
+			...err
+		}
 	} else if err is PanicError {
 		NexusHandlerError{
 			message:     err.message

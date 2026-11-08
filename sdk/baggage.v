@@ -60,9 +60,9 @@ fn baggage_escape(value string) string {
 }
 
 fn baggage_hex(character u8) !u8 {
-	if character >= `0` && character <= `9` { return character - `0` }
-	if character >= `a` && character <= `f` { return character - `a` + 10 }
-	if character >= `A` && character <= `F` { return character - `A` + 10 }
+	if character >= `0` && character <= `9` { return u8(character - `0`) }
+	if character >= `a` && character <= `f` { return u8(character - `a` + 10) }
+	if character >= `A` && character <= `F` { return u8(character - `A` + 10) }
 	return error('invalid baggage percent encoding')
 }
 
@@ -88,7 +88,7 @@ fn baggage_unescape(value string) !string {
 	mut result := strings.new_builder(raw.len)
 	offset = 0
 	for offset < raw.len {
-		_, size := utf8.decode_rune_at(raw, offset)
+		_, size := baggage_decode_rune_at(raw, offset)
 		if size == 1 && raw[offset] >= 128 {
 			result.write_string('�')
 		} else {
@@ -291,7 +291,7 @@ fn baggage_trim_space(value string) string {
 	mut first := 0
 	mut last := value.len
 	for first < last {
-		character, size := utf8.decode_rune_at(value, first)
+		character, size := baggage_decode_rune_at(value, first)
 		if !baggage_space(character) {
 			break
 		}
@@ -302,11 +302,22 @@ fn baggage_trim_space(value string) string {
 		for start > first && (value[start] & u8(0xc0)) == u8(0x80) {
 			start--
 		}
-		character, _ := utf8.decode_rune_at(value, start)
+		character, _ := baggage_decode_rune_at(value, start)
 		if !baggage_space(character) {
 			break
 		}
 		last = start
 	}
 	return value[first..last]
+}
+
+// get_rune is public in both released V 0.5.2 and current upstream V.
+fn baggage_decode_rune_at(value string, offset int) (rune, int) {
+	if offset < 0 || offset >= value.len { return 0, 0 }
+	character := utf8.get_rune(value, offset)
+	encoded := character.str()
+	if offset + encoded.len > value.len || value[offset..offset + encoded.len] != encoded {
+		return rune(0xfffd), 1
+	}
+	return character, encoded.len
 }

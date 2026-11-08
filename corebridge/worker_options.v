@@ -3,9 +3,9 @@ module corebridge
 @[typedef]
 struct C.SpikePollerAutoscaling {
 	enabled bool
-	minimum uint
-	maximum uint
-	initial uint
+	minimum u32
+	maximum u32
+	initial u32
 }
 
 pub struct PollerAutoscaling {
@@ -19,9 +19,9 @@ pub:
 fn (options PollerAutoscaling) native_options() C.SpikePollerAutoscaling {
 	return C.SpikePollerAutoscaling{
 		enabled: options.enabled
-		minimum: uint(options.minimum)
-		maximum: uint(options.maximum)
-		initial: uint(options.initial)
+		minimum: u32(options.minimum)
+		maximum: u32(options.maximum)
+		initial: u32(options.initial)
 	}
 }
 
@@ -43,15 +43,15 @@ struct C.SpikeWorkerOptions {
 	nondeterminism_as_workflow_fail_for_types C.TemporalCoreByteArrayRefArray
 	legacy_versioning                         bool
 	versioning_behavior                       i32
-	workflow_slots                            uint
-	activity_slots                            uint
-	local_activity_slots                      uint
-	nexus_slots                               uint
+	workflow_slots                            u32
+	activity_slots                            u32
+	local_activity_slots                      u32
+	nexus_slots                               u32
 	max_cached_workflows                      u32
 	max_eager_activity_reservations           u32
-	workflow_pollers                          uint
-	activity_pollers                          uint
-	nexus_pollers                             uint
+	workflow_pollers                          u32
+	activity_pollers                          u32
+	nexus_pollers                             u32
 	workflow_poller_autoscaling               C.SpikePollerAutoscaling
 	activity_poller_autoscaling               C.SpikePollerAutoscaling
 	nexus_poller_autoscaling                  C.SpikePollerAutoscaling
@@ -66,8 +66,8 @@ struct C.SpikeWorkerOptions {
 	target_memory_usage                       f64
 	target_cpu_usage                          f64
 	ramp_throttle_millis                      u64
-	minimum_workflow_slots                    uint
-	minimum_activity_slots                    uint
+	minimum_workflow_slots                    u32
+	minimum_activity_slots                    u32
 }
 
 pub struct PluginInfo {
@@ -85,7 +85,7 @@ struct C.TemporalCorePluginInfo {
 @[typedef]
 struct C.TemporalCorePluginInfoArray {
 	data &C.TemporalCorePluginInfo
-	size uint
+	size u32
 }
 
 fn (config Config) native_worker_options() C.SpikeWorkerOptions {
@@ -94,11 +94,11 @@ fn (config Config) native_worker_options() C.SpikeWorkerOptions {
 		plugins << C.TemporalCorePluginInfo{
 			name:    C.TemporalCoreByteArrayRef{
 				data: plugin.name.str
-				size: uint(plugin.name.len)
+				size: u32(plugin.name.len)
 			}
 			version: C.TemporalCoreByteArrayRef{
 				data: plugin.version.str
-				size: uint(plugin.version.len)
+				size: u32(plugin.version.len)
 			}
 		}
 	}
@@ -107,32 +107,32 @@ fn (config Config) native_worker_options() C.SpikeWorkerOptions {
 	return C.SpikeWorkerOptions{
 		plugins:                                   C.TemporalCorePluginInfoArray{
 			data: plugins.data
-			size: uint(plugins.len)
+			size: u32(plugins.len)
 		}
 		disable_payload_error_limit:               config.disable_payload_error_limit
 		storage_drivers:                           C.TemporalCoreByteArrayRefArray{
 			data: drivers.data
-			size: uint(drivers.len)
+			size: u32(drivers.len)
 		}
 		workflow_slot_bridge:                      if bridge := config.workflow_slot_bridge {
 			bridge.pointer
 		} else {
-			unsafe { nil }
+			unsafe { &C.SpikeSlotBridge(nil) }
 		}
 		activity_slot_bridge:                      if bridge := config.activity_slot_bridge {
 			bridge.pointer
 		} else {
-			unsafe { nil }
+			unsafe { &C.SpikeSlotBridge(nil) }
 		}
 		local_activity_slot_bridge:                if bridge := config.local_activity_slot_bridge {
 			bridge.pointer
 		} else {
-			unsafe { nil }
+			unsafe { &C.SpikeSlotBridge(nil) }
 		}
 		nexus_slot_bridge:                         if bridge := config.nexus_slot_bridge {
 			bridge.pointer
 		} else {
-			unsafe { nil }
+			unsafe { &C.SpikeSlotBridge(nil) }
 		}
 		workflow_poller_autoscaling:               config.workflow_poller_autoscaling.native_options()
 		activity_poller_autoscaling:               config.activity_poller_autoscaling.native_options()
@@ -145,19 +145,19 @@ fn (config Config) native_worker_options() C.SpikeWorkerOptions {
 		nondeterminism_as_workflow_fail:           config.nondeterminism_as_workflow_fail
 		nondeterminism_as_workflow_fail_for_types: C.TemporalCoreByteArrayRefArray{
 			data: values.data
-			size: uint(values.len)
+			size: u32(values.len)
 		}
 		legacy_versioning:                         config.legacy_versioning
 		versioning_behavior:                       i32(config.versioning_behavior)
-		workflow_slots:                            uint(config.workflow_concurrency)
-		activity_slots:                            uint(config.activity_concurrency)
-		local_activity_slots:                      uint(config.local_activity_concurrency)
-		nexus_slots:                               uint(config.nexus_concurrency)
+		workflow_slots:                            u32(config.workflow_concurrency)
+		activity_slots:                            u32(config.activity_concurrency)
+		local_activity_slots:                      u32(config.local_activity_concurrency)
+		nexus_slots:                               u32(config.nexus_concurrency)
 		max_cached_workflows:                      config.max_cached_workflows
 		max_eager_activity_reservations:           config.max_eager_activity_reservations
-		workflow_pollers:                          uint(config.workflow_pollers)
-		activity_pollers:                          uint(config.activity_pollers)
-		nexus_pollers:                             uint(config.nexus_pollers)
+		workflow_pollers:                          u32(config.workflow_pollers)
+		activity_pollers:                          u32(config.activity_pollers)
+		nexus_pollers:                             u32(config.nexus_pollers)
 		sticky_timeout_millis:                     config.sticky_timeout_millis
 		shutdown_grace_millis:                     config.shutdown_grace_millis
 		max_heartbeat_millis:                      config.max_heartbeat_millis
@@ -169,7 +169,7 @@ fn (config Config) native_worker_options() C.SpikeWorkerOptions {
 		target_memory_usage:                       config.target_memory_usage
 		target_cpu_usage:                          config.target_cpu_usage
 		ramp_throttle_millis:                      config.ramp_throttle_millis
-		minimum_workflow_slots:                    uint(config.minimum_workflow_slots)
-		minimum_activity_slots:                    uint(config.minimum_activity_slots)
+		minimum_workflow_slots:                    u32(config.minimum_workflow_slots)
+		minimum_activity_slots:                    u32(config.minimum_activity_slots)
 	}
 }

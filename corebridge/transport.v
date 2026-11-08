@@ -12,13 +12,13 @@ fn validate_text(value string, name string) ! {
 @[typedef]
 struct C.TemporalCoreByteArrayRef {
 	data &u8
-	size uint
+	size u32
 }
 
 @[typedef]
 struct C.TemporalCoreByteArrayRefArray {
 	data &C.TemporalCoreByteArrayRef
-	size uint
+	size u32
 }
 
 @[typedef]
@@ -149,7 +149,7 @@ fn refs(values [][]u8) []C.TemporalCoreByteArrayRef {
 	for value in values {
 		result << C.TemporalCoreByteArrayRef{
 			data: value.data
-			size: uint(value.len)
+			size: u32(value.len)
 		}
 	}
 	return result
@@ -252,23 +252,23 @@ fn native_transport(address string, options Transport, telemetry Telemetry, meta
 		tls_domain:                     options.tls_domain.str
 		server_root_ca:                 C.TemporalCoreByteArrayRef{
 			data: options.server_root_ca.data
-			size: uint(options.server_root_ca.len)
+			size: u32(options.server_root_ca.len)
 		}
 		client_cert:                    C.TemporalCoreByteArrayRef{
 			data: options.client_cert.data
-			size: uint(options.client_cert.len)
+			size: u32(options.client_cert.len)
 		}
 		client_private_key:             C.TemporalCoreByteArrayRef{
 			data: options.client_private_key.data
-			size: uint(options.client_private_key.len)
+			size: u32(options.client_private_key.len)
 		}
 		metadata:                       C.TemporalCoreByteArrayRefArray{
 			data: metadata.data
-			size: uint(metadata.len)
+			size: u32(metadata.len)
 		}
 		binary_metadata:                C.TemporalCoreByteArrayRefArray{
 			data: binary.data
-			size: uint(binary.len)
+			size: u32(binary.len)
 		}
 		keep_alive_interval_millis:     options.keep_alive_interval_millis
 		keep_alive_timeout_millis:      options.keep_alive_timeout_millis
@@ -301,6 +301,6 @@ pub fn (connection &Connection) update_metadata(metadata map[string][]u8, binary
 	if state.closed { return error('connection is closed') }
 	C.spike_update_metadata(connection.core, C.TemporalCoreByteArrayRefArray{
 		data: values.data
-		size: uint(values.len)
+		size: u32(values.len)
 	}, binary)
 }

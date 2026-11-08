@@ -1,7 +1,7 @@
 module sdk
 
-import temporal
-import corebridge
+import alexvyber.temporal_v.temporal
+import alexvyber.temporal_v.corebridge
 import time
 
 struct WorkflowStorageTargets {
@@ -244,12 +244,14 @@ mut:
 
 fn prepare_activity_recovered(handler ActivityDispatch, context ActivityContext, received_start temporal.CoresdkActivityTask_Start, mut outcome ActivityCompletionOutcome) {
 	defer { context.metrics.close() }
-	defer {
-		if message := recover() {
-			// A failed application converter/storage callback cannot safely encode its own panic.
-			outcome.result = ActivityResult{
-				token:  context.task_token
-				result: activity_panic_failure(message, recovered_panic_stack_trace())
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				// A failed application converter/storage callback cannot safely encode its own panic.
+				outcome.result = ActivityResult{
+					token:  context.task_token
+					result: activity_panic_failure(message, recovery_stack_trace())
+				}
 			}
 		}
 	}

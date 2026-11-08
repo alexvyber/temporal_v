@@ -1,9 +1,9 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import time
-import json2
+import x.json2
 
 fn nexus_client_start(client &sdk.Client, options sdk.WorkerOptions) ![]string {
 	handle := client.start_nexus_operation(sdk.NexusExecutionStart{

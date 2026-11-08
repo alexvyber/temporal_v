@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 import time
 
 pub struct UpdateRequest {
@@ -84,6 +84,7 @@ pub fn (client &Client) update_result(handle UpdateHandle, wait_timeout_millis u
 			return update_outcome(outcome, converter)!
 		}
 	}
+	return error('update result polling stopped unexpectedly')
 }
 
 fn update_outcome(outcome temporal.TemporalApiUpdateV1_Outcome, converter DataConverter) !UpdateResult {

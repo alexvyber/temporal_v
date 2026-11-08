@@ -1,8 +1,8 @@
 module main
 
-import sdk
+import alexvyber.temporal_v.sdk
 import os
-import json2
+import x.json2
 import time
 
 fn construction_query(client &sdk.Client, handle sdk.WorkflowHandle, marker string) !string {

@@ -1,7 +1,7 @@
 module sdk
 
-import json2
-import temporal
+import x.json2
+import alexvyber.temporal_v.temporal
 
 // Baggage travels alongside SpanContext and is never exported as span attributes.
 pub struct PropagationContext {

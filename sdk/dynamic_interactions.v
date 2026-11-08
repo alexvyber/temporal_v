@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 // NamedQueriesWorkflow declares named query dispatch alongside QueryableWorkflow.
 // Names are nonempty and unique. Dynamic query fallback never handles these names.

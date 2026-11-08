@@ -1,6 +1,6 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 import encoding.base64
 import sync
 

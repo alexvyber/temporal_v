@@ -1,10 +1,10 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import os
-import example_converter
-import example_storage
+import alexvyber.temporal_v.example_converter
+import alexvyber.temporal_v.example_storage
 
 struct PanicCodec {}
 

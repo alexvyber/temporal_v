@@ -1,9 +1,9 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import os
-import json2
+import x.json2
 
 struct DynamicUpdateState {
 mut:

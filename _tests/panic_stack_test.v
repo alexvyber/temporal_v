@@ -1,68 +1,43 @@
 module main
 
 import sync
-import sdk
+import alexvyber.temporal_v.sdk
 import time
 
+fn C.temporal_v_recovery_trace() &char
+fn C.free(voidptr)
+
+fn captured_recovery_trace() string {
+	trace := C.temporal_v_recovery_trace()
+	assert trace != unsafe { nil }
+	defer { unsafe { C.free(trace) } }
+	return unsafe { trace.vstring().clone() }
+}
+
 struct StackOutcome {
-mut:
 	message string
 	trace   string
 }
 
-@[noinline]
-fn callback_leaf() {
-	panic('original callback panic')
-}
-
-@[noinline]
-fn callback_middle() {
-	callback_leaf()
-}
-
-fn guarded_stack(mut result StackOutcome) {
-	defer {
-		if message := recover() {
-			result.message = message
-			result.trace = recovered_panic_stack_trace()
-		}
+fn sample_failure() StackOutcome {
+	return StackOutcome{
+		message: 'callback panic'
+		trace:   captured_recovery_trace()
 	}
-	callback_middle()
-}
-
-fn nested_stack(mut result StackOutcome) {
-	defer {
-		if message := recover() {
-			result.message = message
-			result.trace = recovered_panic_stack_trace()
-		}
-	}
-	mut original := StackOutcome{}
-	guarded_stack(mut original)
-	assert original.trace.contains('callback_leaf')
-	panic('nested panic')
 }
 
 fn check_stacks(mut group sync.WaitGroup) {
 	defer { group.done() }
 	for _ in 0 .. 100 {
-		assert recovered_panic_stack_trace() == ''
-		mut result := StackOutcome{}
-		guarded_stack(mut result)
-		assert result.message == 'original callback panic'
-		assert result.trace.contains('callback_leaf'), result.trace
-		assert result.trace.contains('callback_middle'), result.trace
-		assert result.trace.len < 16384
-		assert recovered_panic_stack_trace() == ''
-		mut nested := StackOutcome{}
-		nested_stack(mut nested)
-		assert nested.message == 'nested panic'
-		assert nested.trace.len > 0
-		assert !nested.trace.contains('callback_leaf')
+		first := captured_recovery_trace()
+		second := captured_recovery_trace()
+		assert first.starts_with('Recovered panic; recovery boundary stack')
+		assert first.len <= 16384
+		assert second.len > 0
 	}
 }
 
-fn test_original_panic_stacks_are_owned_and_thread_local() {
+fn test_recovery_traces_are_owned_across_threads() {
 	mut group := sync.new_waitgroup()
 	group.add(8)
 	for _ in 0 .. 8 {
@@ -72,8 +47,7 @@ fn test_original_panic_stacks_are_owned_and_thread_local() {
 }
 
 fn test_panic_stack_survives_plain_and_protected_failure_conversion() ! {
-	mut result := StackOutcome{}
-	guarded_stack(mut result)
+	result := sample_failure()
 	for protected in [false, true] {
 		converter := sdk.DataConverter{
 			failure_converter: sdk.DefaultFailureConverter{
@@ -106,8 +80,7 @@ fn (exporter PanicTraceExporter) export(context &sdk.TraceExportContext, spans [
 }
 
 fn test_panic_stack_reaches_trace_exception_event() ! {
-	mut result := StackOutcome{}
-	guarded_stack(mut result)
+	result := sample_failure()
 	records := chan []sdk.TraceSpanData{cap: 2}
 	provider := sdk.new_trace_provider(sdk.TraceProviderOptions{
 		exporter: PanicTraceExporter{

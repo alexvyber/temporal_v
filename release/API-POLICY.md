@@ -16,7 +16,9 @@ argument. Workflow factories take `(WorkflowContextView, []PayloadValue)
 and return `!Workflow`. Inputs are decoded once using named/dynamic registration
 semantics. Initializer input buffers are independent of the started event; raw
 views retain opaque encodings. Factory errors fail the workflow task for retry;
-factory panics retain the original stack and obey the workflow panic policy.
+on upstream V with native recovery, factory panics obey the workflow panic
+policy and retain a labelled recovery-boundary stack. Released V 0.5.2 exits the
+worker process on panic; it does not provide callback panic recovery.
 
 Source API compatibility and workflow-history compatibility are separate gates.
 `replay-baseline-v1` is a frozen regression-test fixture, not a published SDK

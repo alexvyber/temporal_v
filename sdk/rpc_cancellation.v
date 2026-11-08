@@ -1,6 +1,6 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 
 // A token may be shared by concurrent RPCs. It is independent of the client:
 // cancelling a result/Update wait does not cancel the workflow or roll back a

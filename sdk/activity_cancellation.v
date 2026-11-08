@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 pub struct ActivityCancelInfo {
 pub:
@@ -30,6 +30,6 @@ pub fn (context &ActivityContext) cancellation_info() ?ActivityCancelInfo {
 fn (context &ActivityContext) cancellation_snapshot() ActivityCancelInfo {
 	return ActivityCancelInfo{
 		reason:  context.cancel_information.reason
-		details: owned_optional_proto(context.cancel_information.details)
+		details: owned_proto_coresdkactivitytask_activitycancellationdetails(context.cancel_information.details)
 	}
 }

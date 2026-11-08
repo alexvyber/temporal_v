@@ -1,7 +1,7 @@
 module sdk
 
-import corebridge
-import temporal
+import alexvyber.temporal_v.corebridge
+import alexvyber.temporal_v.temporal
 import time
 
 pub struct NexusRequestInfo {
@@ -127,7 +127,8 @@ fn execute_nexus(connection &corebridge.Connection, config WorkerOptions, servic
 	if variant !is temporal.CoresdkNexus_NexusTask_Task_Case {
 		return error('expected Nexus request task')
 	}
-	request := variant.value.request or { return error('Nexus task missing request') }
+	request_variant := variant as temporal.CoresdkNexus_NexusTask_Task_Case
+	request := request_variant.value.request or { return error('Nexus task missing request') }
 	operation := request.variant or { return error('Nexus request missing operation') }
 	trace_span := start_nexus_trace(tracing, task.endpoint, request)
 	defer {
@@ -406,39 +407,7 @@ fn serve_nexus(connection &corebridge.Connection, config WorkerOptions, services
 				else {}
 			}
 		}
-		for !stopped || active.len > 0 {
-			select {
-				task := <-tasks {
-					if task.message != '' || task.bytes.len == 0 {
-						stopped = true
-						continue
-					}
-					pending := temporal.CoresdkNexus_NexusTask.decode(task.bytes) or { continue }
-					pending_variant := pending.variant or { continue }
-					if pending_variant is temporal.CoresdkNexus_NexusTask_Task_Case {
-						connection.complete_nexus(temporal.CoresdkNexus_NexusTaskCompletion{
-							task_token: pending_variant.value.task_token
-							status:     temporal.CoresdkNexus_NexusTaskCompletion_AckCancel_Case{
-								value: true
-							}
-						}.encode()) or {
-							emit_log(config.logger, .error,
-								'Nexus drain acknowledgement failed: ${err.msg()}')
-						}
-					}
-				}
-				result := <-results {
-					active.delete(result.token.hex())
-					connection.complete_nexus(temporal.CoresdkNexus_NexusTaskCompletion{
-						task_token: result.token
-						status:     result.status
-					}.encode()) or {
-						emit_log(config.logger, .error,
-							'Nexus drain completion failed: ${err.msg()}')
-					}
-				}
-			}
-		}
+		drain_nexus_tasks(connection, config, tasks, results, stopped, mut active)
 		poller.wait()
 	}
 	emit_log(config.logger, .info, 'NEXUS_READY queue=${config.task_queue}')
@@ -487,4 +456,40 @@ pub fn (context &NexusContext) typed_input() !PayloadValue {
 
 pub fn (context &NexusContext) input_payload() ?RawValue {
 	return context.raw_input
+}
+
+fn drain_nexus_tasks(connection &corebridge.Connection, config WorkerOptions, tasks chan PollResult, results chan NexusCompletion, initial_stopped bool, mut active map[string]chan bool) {
+	mut stopped := initial_stopped
+	for !stopped || active.len > 0 {
+		select {
+			task := <-tasks {
+				if task.message != '' || task.bytes.len == 0 {
+					stopped = true
+					continue
+				}
+				pending := temporal.CoresdkNexus_NexusTask.decode(task.bytes) or { continue }
+				pending_variant := pending.variant or { continue }
+				if pending_variant is temporal.CoresdkNexus_NexusTask_Task_Case {
+					connection.complete_nexus(temporal.CoresdkNexus_NexusTaskCompletion{
+						task_token: pending_variant.value.task_token
+						status:     temporal.CoresdkNexus_NexusTaskCompletion_AckCancel_Case{
+							value: true
+						}
+					}.encode()) or {
+						emit_log(config.logger, .error,
+							'Nexus drain acknowledgement failed: ${err.msg()}')
+					}
+				}
+			}
+			result := <-results {
+				active.delete(result.token.hex())
+				connection.complete_nexus(temporal.CoresdkNexus_NexusTaskCompletion{
+					task_token: result.token
+					status:     result.status
+				}.encode()) or {
+					emit_log(config.logger, .error, 'Nexus drain completion failed: ${err.msg()}')
+				}
+			}
+		}
+	}
 }

@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 import time
 
 // An owned, read-only snapshot; it has no command or mutable-runtime access.

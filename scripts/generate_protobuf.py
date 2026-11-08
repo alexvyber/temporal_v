@@ -1,6 +1,7 @@
 """Generate actual Core schemas without invoking vpbgen's implicit formatter."""
 import argparse
 import os
+import re
 from pathlib import Path
 import subprocess
 
@@ -17,7 +18,11 @@ def generate(root, artifacts, check=False):
     command.append(str(root / 'schemas/sdk.proto'))
     result = subprocess.run(command, check=True, capture_output=True, text=True,
                             env=dict(os.environ, VMODULES=str(artifacts / 'vmodules')))
-    content = formatted_source(result.stdout, 'core_pb.v')
+    raw = result.stdout.replace('import protobuf\n', 'import alexvyber.temporal_v.protobuf\n').replace('import json2\n', 'import x.json2\n')
+    for name in re.findall(r'^pub fn (\w+)\.decode\(', raw, re.M):
+        raw += f'\npub fn (message {name}) decode_owned(data []u8) !{name} {{ return {name}.decode(data)! }}\n'
+        raw += f'\npub fn (message {name}) validate_protojson(data string) ! {{ {name}.from_json(data)! }}\n'
+    content = formatted_source(raw, 'core_pb.v')
     destination = root / 'temporal/core_pb.v'
     if check:
         if destination.read_text() != content:

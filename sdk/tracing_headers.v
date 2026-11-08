@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 // Propagator-owned headers never pass through application payload converters or codecs.
 // Memo maps use encode_map/decode_map and retain the full application key space.

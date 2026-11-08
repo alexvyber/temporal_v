@@ -1,6 +1,6 @@
 module corebridge
 
-import json2
+import x.json2
 import os
 
 @[typedef]
@@ -69,7 +69,7 @@ pub fn (err EnvConfigError) diagnostic() string {
 fn envconfig_ref(value []u8) C.TemporalCoreByteArrayRef {
 	return C.TemporalCoreByteArrayRef{
 		data: value.data
-		size: uint(value.len)
+		size: u32(value.len)
 	}
 }
 

@@ -1,8 +1,8 @@
 module sdk
 
-import temporal
-import json2
-import protobuf
+import alexvyber.temporal_v.temporal
+import x.json2
+import alexvyber.temporal_v.protobuf
 
 // Explicit JSON retains its standard representation through converter composition.
 pub struct JsonValue {
@@ -34,7 +34,11 @@ pub:
 pub fn protobuf_json_value[T](message T, message_type string) !ProtobufJsonValue {
 	validate_protobuf_name(message_type)!
 	data := message.json()!
-	T.from_json(data)!
+	$if v3_backend ? {
+		T.from_json(data)!
+	} $else {
+		message.validate_protojson(data)!
+	}
 	return ProtobufJsonValue{
 		data:         data
 		message_type: message_type
@@ -64,7 +68,11 @@ pub:
 pub fn protobuf_value[T](message T, message_type string) !ProtobufValue {
 	validate_protobuf_name(message_type)!
 	data := message.encode()
-	T.decode(data)!
+	$if v3_backend ? {
+		T.decode(data)!
+	} $else {
+		message.decode_owned(data)!
+	}
 	return ProtobufValue{
 		data:         data
 		message_type: message_type

@@ -1,0 +1,1 @@
+Bundled protobuf runtime from the revision in `../locks/protobuf-runtime.json`, including the SDK decoder hardening. Generator and runtime source pins are maintained together. The upstream MIT license is in `LICENSE`.

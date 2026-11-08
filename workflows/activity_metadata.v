@@ -1,8 +1,8 @@
 module workflows
 
-import sdk
-import json2
-import temporal
+import alexvyber.temporal_v.sdk
+import x.json2
+import alexvyber.temporal_v.temporal
 import time
 
 struct ActivityMetadataWorkflow {

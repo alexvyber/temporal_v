@@ -1,9 +1,9 @@
 module main
 
-import sdk
-import temporal
-import example_converter
-import json2
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
+import alexvyber.temporal_v.example_converter
+import x.json2
 import os
 import time
 

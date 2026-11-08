@@ -1,6 +1,6 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 import sync
 
 pub enum SlotKind {
@@ -147,17 +147,7 @@ fn dispatch_slots(bridge &corebridge.SlotBridge, supplier SlotSupplier, kind Slo
 				})
 			}
 			3 {
-				mut information := ?SlotInfo(none)
-				if event.has_info {
-					information = SlotInfo{
-						kind:          kind
-						workflow_type: event.workflow_type
-						activity_type: event.activity_type
-						service:       event.service
-						operation:     event.operation
-						is_sticky:     event.is_sticky
-					}
-				}
+				information := released_slot_info(event, kind)
 				supplier.release(SlotPermit{ id: event.permit }, information)
 			}
 			4 {
@@ -258,5 +248,20 @@ fn open_worker(options WorkerOptions, kind corebridge.WorkerKind) !WorkerConnect
 	return WorkerConnection{
 		connection:  connection
 		dispatchers: dispatchers
+	}
+}
+
+// Keep this optional return declared even in client-only builds: V 0.5.2
+// otherwise omits its typedef when it appears only as an interface argument.
+@[markused]
+fn released_slot_info(event corebridge.SlotEvent, kind SlotKind) ?SlotInfo {
+	if !event.has_info { return none }
+	return SlotInfo{
+		kind:          kind
+		workflow_type: event.workflow_type
+		activity_type: event.activity_type
+		service:       event.service
+		operation:     event.operation
+		is_sticky:     event.is_sticky
 	}
 }

@@ -1,7 +1,7 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import os
 
 struct NexusContextPlugin {}

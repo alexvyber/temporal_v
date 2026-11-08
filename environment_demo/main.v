@@ -1,9 +1,9 @@
 module main
 
 import flag
-import json2
+import x.json2
 import os
-import sdk
+import alexvyber.temporal_v.sdk
 import time
 
 struct LongTimer {}

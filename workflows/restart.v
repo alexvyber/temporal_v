@@ -1,8 +1,8 @@
 module workflows
 
-import json2
-import sdk
-import example_activities
+import x.json2
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.example_activities
 import os
 import time
 

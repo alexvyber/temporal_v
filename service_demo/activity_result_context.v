@@ -1,9 +1,9 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import time
-import json2
+import x.json2
 import os
 
 fn activity_result_scope(options sdk.WorkerOptions) temporal.TemporalApiNexusV1_PropagatedSerializationContext {

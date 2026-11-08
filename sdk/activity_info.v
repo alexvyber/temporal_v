@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 import time
 
 pub struct ActivityInfo {
@@ -34,8 +34,8 @@ pub fn (context &ActivityContext) info() ActivityInfo {
 	return ActivityInfo{
 		...context.information
 		task_token:            context.task_token.clone()
-		retry_policy:          owned_optional_proto[temporal.TemporalApiCommonV1_RetryPolicy](context.information.retry_policy)
-		priority:              owned_optional_proto[temporal.TemporalApiCommonV1_Priority](context.information.priority)
+		retry_policy:          owned_proto_temporalapicommonv1_retrypolicy(context.information.retry_policy)
+		priority:              owned_proto_temporalapicommonv1_priority(context.information.priority)
 		raw_headers:           context.raw_headers()
 		raw_heartbeat_details: context.information.raw_heartbeat_details.clone()
 	}

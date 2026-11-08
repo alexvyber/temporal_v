@@ -1,8 +1,8 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 import sync
-import temporal
+import alexvyber.temporal_v.temporal
 import time
 
 pub enum TestServerMode {

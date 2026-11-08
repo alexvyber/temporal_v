@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 // Observes codec/storage-decoded protobuf payloads before workflow factories or
 // handlers run. Application payload conversion has not occurred. Each callback
@@ -57,11 +57,13 @@ fn observe_workflow_activation(runtime &Runtime, activation temporal.CoresdkWork
 }
 
 fn recover_activation_interceptor(interceptor WorkerActivationInterceptor, bytes []u8, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -73,11 +75,13 @@ fn recover_activation_interceptor(interceptor WorkerActivationInterceptor, bytes
 }
 
 fn recover_observed_activation(runtime &Runtime, activation temporal.CoresdkWorkflowActivation_WorkflowActivation, options WorkerOptions, mut outcome ObservedActivationOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}

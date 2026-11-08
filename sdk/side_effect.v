@@ -1,7 +1,7 @@
 module sdk
 
-import temporal
-import json2
+import alexvyber.temporal_v.temporal
+import x.json2
 import strconv
 
 pub type SideEffect = fn () !PayloadValue
@@ -149,7 +149,7 @@ pub fn (mut context WorkflowContext) mutable_side_effect(id string, operation Si
 			if markers.len == 0 {
 				context.mutable_side_effect_markers.delete(id)
 			} else {
-				context.mutable_side_effect_markers[id] = markers
+				context.mutable_side_effect_markers[id] = markers.clone()
 			}
 		}
 		encoded := context.mutable_side_effect_values[id] or {
@@ -288,7 +288,7 @@ fn (mut context WorkflowContext) remember_workflow_markers(input []temporal.Core
 					result:     values.payloads.clone()
 					call_count: count
 				}
-				context.mutable_side_effect_markers[id] = pending
+				context.mutable_side_effect_markers[id] = pending.clone()
 			}
 		} else {
 			return error('unsupported workflow marker: ${marker.marker_name}')

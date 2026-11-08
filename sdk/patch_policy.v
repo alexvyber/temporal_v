@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 pub struct PatchActivationInput {
 	converter  DataConverter @[json: '-']

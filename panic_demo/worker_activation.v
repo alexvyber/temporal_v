@@ -1,10 +1,10 @@
 module main
 
-import sdk
-import temporal
-import corebridge
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
+import alexvyber.temporal_v.corebridge
 import os
-import json2
+import x.json2
 import crypto.sha256
 
 struct ActivationAudit {

@@ -1,9 +1,9 @@
 module example_converter
 
-import example_storage
+import alexvyber.temporal_v.example_storage
 import os
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 
 // This deliberately simple binary framing exercises codec composition. It is not encryption.
 struct PrefixCodec {

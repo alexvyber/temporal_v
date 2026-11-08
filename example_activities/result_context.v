@@ -1,7 +1,7 @@
 module example_activities
 
-import sdk
-import json2
+import alexvyber.temporal_v.sdk
+import x.json2
 
 pub fn result_context(mut context sdk.ActivityContext, arguments []string) !sdk.PayloadValue {
 	context.check_cancelled()!

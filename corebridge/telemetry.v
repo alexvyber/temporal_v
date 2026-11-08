@@ -47,7 +47,7 @@ struct C.TemporalCoreRuntimeInfo {
 @[typedef]
 struct C.TemporalCoreRuntimeInfoArray {
 	data &C.TemporalCoreRuntimeInfo
-	size uint
+	size u32
 }
 
 pub struct Telemetry {
@@ -150,7 +150,7 @@ fn (options Telemetry) native_options(bridge ?&MetricExportBridge) !C.SpikeTelem
 			runtime_type: i32(runtime.kind)
 			version:      C.TemporalCoreByteArrayRef{
 				data: runtime.version.str
-				size: uint(runtime.version.len)
+				size: u32(runtime.version.len)
 			}
 		}
 	}
@@ -174,7 +174,7 @@ fn (options Telemetry) native_options(bridge ?&MetricExportBridge) !C.SpikeTelem
 		worker_heartbeat_millis:      options.worker_heartbeat_millis
 		runtime_info:                 C.TemporalCoreRuntimeInfoArray{
 			data: runtimes.data
-			size: uint(runtimes.len)
+			size: u32(runtimes.len)
 		}
 		disable_environment_info:     options.disable_environment_info
 		log_filter:                   options.log_filter.str

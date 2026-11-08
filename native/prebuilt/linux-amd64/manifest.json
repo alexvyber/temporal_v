@@ -1,0 +1,12 @@
+{
+  "target": "linux-amd64",
+  "profile": "release",
+  "core_source_sha256": "e6455f4be02ea702f33126173aceb9c412c10d4068c43787a44975ebe8e607dc",
+  "header_sha256": "be40ee2a8d6cc10064caa578a0d8ab59ceb2cc735c23342b0e563ae03cb273d7",
+  "core_cargo_lock_sha256": "e266ae3d5ae0e6bf5b7496cf85f110c0de6d5bf2fcec3fe8858a3dc4ac3b8d2d",
+  "payload_cargo_lock_sha256": "aef3ecfcc17df75553362c5a4d23ebbe4108857b4586d77207748b8521a23657",
+  "files": {
+    "libtemporal_v_payloads.so": "bbf45f025830c5e03b3acf6719da8144806a9e392459f6ce4eca355077995966",
+    "libtemporalio_sdk_core_c_bridge.so": "d1043a4b2790e5964370402c12cf516ed2066e2f57efad1ab5983a3e2ea6fcf6"
+  }
+}

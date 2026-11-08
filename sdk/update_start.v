@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 import time
 
 pub enum UpdateStage {
@@ -122,7 +122,9 @@ pub fn (client &Client) start_update(handle WorkflowHandle, options UpdateReques
 				status:      err.code()
 				workflow:    handle
 				update_id:   id
-				rpc_failure: if err is RpcError { ?RpcError(err) } else { none }
+				rpc_failure: if err is RpcError { ?RpcError(RpcError{
+						...err
+					}) } else { none }
 			}
 		}
 		response :=
@@ -184,7 +186,9 @@ pub fn (client &Client) update_with_start(start WorkflowStart, options UpdateReq
 				status:      err.code()
 				workflow:    handle
 				update_id:   id
-				rpc_failure: if err is RpcError { ?RpcError(err) } else { none }
+				rpc_failure: if err is RpcError { ?RpcError(RpcError{
+						...err
+					}) } else { none }
 			}
 		}
 		response :=

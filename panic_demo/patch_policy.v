@@ -1,8 +1,8 @@
 module main
 
-import sdk
-import temporal
-import json2
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
+import x.json2
 import os
 import crypto.sha256
 import time

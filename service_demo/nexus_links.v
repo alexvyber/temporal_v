@@ -1,7 +1,7 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 
 fn nexus_resource_links() !string {
 	namespace := 'namespace +/世界'

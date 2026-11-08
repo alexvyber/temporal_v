@@ -1,7 +1,7 @@
 module sdk
 
-import temporal
-import json2
+import alexvyber.temporal_v.temporal
+import x.json2
 import encoding.utf8
 
 enum EventGroupKind {

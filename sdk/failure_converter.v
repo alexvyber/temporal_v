@@ -1,7 +1,7 @@
 module sdk
 
-import temporal
-import json2
+import alexvyber.temporal_v.temporal
+import x.json2
 
 // Conversion is separate from payload conversion so applications can control
 // error types and protocol metadata while retaining their payload codec policy.

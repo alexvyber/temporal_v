@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 pub struct WorkflowInfo {
 pub:
@@ -40,18 +40,18 @@ pub:
 pub fn (context &WorkflowContext) info() WorkflowInfo {
 	return WorkflowInfo{
 		context_values:                           context.capture_context_values()
-		current_task_deployment_version:          owned_optional_proto[temporal.CoresdkCommon_WorkerDeploymentVersion](context.current_task_deployment_version)
+		current_task_deployment_version:          owned_proto_coresdkcommon_workerdeploymentversion(context.current_task_deployment_version)
 		last_sdk_version:                         context.last_sdk_version
 		target_worker_deployment_version_changed: context.target_worker_deployment_version_changed
-		execution_timeout:                        owned_optional_proto[temporal.GoogleProtobuf_Duration](context.initialization.workflow_execution_timeout)
-		run_timeout:                              owned_optional_proto[temporal.GoogleProtobuf_Duration](context.initialization.workflow_run_timeout)
-		task_timeout:                             owned_optional_proto[temporal.GoogleProtobuf_Duration](context.initialization.workflow_task_timeout)
-		start_time:                               owned_optional_proto[temporal.GoogleProtobuf_Timestamp](context.initialization.start_time)
-		execution_expiration_time:                owned_optional_proto[temporal.GoogleProtobuf_Timestamp](context.initialization.workflow_execution_expiration_time)
-		parent_workflow:                          owned_optional_proto[temporal.CoresdkCommon_NamespacedWorkflowExecution](context.initialization.parent_workflow_info)
-		root_workflow:                            owned_optional_proto[temporal.TemporalApiCommonV1_WorkflowExecution](context.initialization.root_workflow)
-		retry_policy:                             owned_optional_proto[temporal.TemporalApiCommonV1_RetryPolicy](context.initialization.retry_policy)
-		priority:                                 owned_optional_proto[temporal.TemporalApiCommonV1_Priority](context.initialization.priority)
+		execution_timeout:                        owned_proto_googleprotobuf_duration(context.initialization.workflow_execution_timeout)
+		run_timeout:                              owned_proto_googleprotobuf_duration(context.initialization.workflow_run_timeout)
+		task_timeout:                             owned_proto_googleprotobuf_duration(context.initialization.workflow_task_timeout)
+		start_time:                               owned_proto_googleprotobuf_timestamp(context.initialization.start_time)
+		execution_expiration_time:                owned_proto_googleprotobuf_timestamp(context.initialization.workflow_execution_expiration_time)
+		parent_workflow:                          owned_proto_coresdkcommon_namespacedworkflowexecution(context.initialization.parent_workflow_info)
+		root_workflow:                            owned_proto_temporalapicommonv1_workflowexecution(context.initialization.root_workflow)
+		retry_policy:                             owned_proto_temporalapicommonv1_retrypolicy(context.initialization.retry_policy)
+		priority:                                 owned_proto_temporalapicommonv1_priority(context.initialization.priority)
 		original_execution_run_id:                if context.initialization.original_execution_run_id == '' {
 			context.run_id
 		} else {

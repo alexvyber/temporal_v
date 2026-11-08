@@ -10,7 +10,7 @@ struct C.SpikeSlotBridge {}
 struct C.SpikeSlotEvent {
 	kind            int
 	slot_kind       int
-	permit          uint
+	permit          u32
 	has_info        bool
 	is_sticky       bool
 	task_queue      C.TemporalCoreByteArrayRef
@@ -25,7 +25,7 @@ struct C.SpikeSlotEvent {
 fn C.spike_slot_bridge_new() &C.SpikeSlotBridge
 fn C.spike_slot_bridge_poll(&C.SpikeSlotBridge, u32) &C.SpikeSlotEvent
 fn C.spike_slot_bridge_is_canceled(&C.SpikeSlotBridge, &C.SpikeSlotEvent) bool
-fn C.spike_slot_bridge_respond(&C.SpikeSlotBridge, &C.SpikeSlotEvent, uint, bool)
+fn C.spike_slot_bridge_respond(&C.SpikeSlotBridge, &C.SpikeSlotEvent, u32, bool)
 fn C.spike_slot_bridge_stop(&C.SpikeSlotBridge)
 fn C.spike_slot_bridge_free(&C.SpikeSlotBridge)
 
@@ -83,7 +83,7 @@ pub fn (bridge &SlotBridge) poll(timeout_millis u32) ?SlotEvent {
 }
 
 pub fn (bridge &SlotBridge) respond(event SlotEvent, value u64, known bool) {
-	C.spike_slot_bridge_respond(bridge.pointer, event.native, uint(value), known)
+	C.spike_slot_bridge_respond(bridge.pointer, event.native, u32(value), known)
 }
 
 pub fn (bridge &SlotBridge) stop() {

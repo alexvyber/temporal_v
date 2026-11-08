@@ -1,9 +1,9 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 import sync
 import time
-import json2
+import x.json2
 
 pub interface TraceExporter {
 	export(context &TraceExportContext, spans []TraceSpanData) !

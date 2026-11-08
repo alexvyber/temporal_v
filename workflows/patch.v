@@ -1,7 +1,7 @@
 module workflows
 
 import os
-import sdk
+import alexvyber.temporal_v.sdk
 import time
 
 struct PatchWorkflow {

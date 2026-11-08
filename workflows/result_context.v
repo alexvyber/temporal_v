@@ -1,7 +1,7 @@
 module workflows
 
-import sdk
-import json2
+import alexvyber.temporal_v.sdk
+import x.json2
 
 struct ResultContextState {
 	input  sdk.SerializationContext

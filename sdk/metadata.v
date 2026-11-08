@@ -1,9 +1,9 @@
 module sdk
 
-import json2
+import x.json2
 import math
 import strconv
-import temporal
+import alexvyber.temporal_v.temporal
 import time
 
 pub enum SearchAttributeType {
@@ -49,7 +49,7 @@ fn (attribute SearchAttribute) encode() !temporal.TemporalApiCommonV1_Payload {
 				if value !is string {
 					return error('datetime search attribute requires an RFC3339 string')
 				}
-				time.parse_rfc3339(value)!
+				time.parse_rfc3339(value as string)!
 			}
 			.integer {
 				strconv.atoi64(data)!
@@ -67,7 +67,7 @@ fn (attribute SearchAttribute) encode() !temporal.TemporalApiCommonV1_Payload {
 				if value !is []json2.Any {
 					return error('keyword-list search attribute requires an array')
 				}
-				for item in value {
+				for item in value as []json2.Any {
 					if item !is string { return error('keyword-list entries must be strings') }
 				}
 			}

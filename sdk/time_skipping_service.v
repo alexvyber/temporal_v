@@ -2,7 +2,7 @@
 // Low-level calls use explicit namespace/options in their generated request.
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 pub fn (client &Client) rpc_test_lock_time_skipping(request temporal.TemporalApiTestserviceV1_LockTimeSkippingRequest) !temporal.TemporalApiTestserviceV1_LockTimeSkippingResponse {
 	return temporal.TemporalApiTestserviceV1_LockTimeSkippingResponse.decode(client.call(.test,

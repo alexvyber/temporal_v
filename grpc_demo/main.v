@@ -1,12 +1,12 @@
 module main
 
-import sdk
-import corebridge
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.corebridge
+import alexvyber.temporal_v.temporal
 import os
 import time
 import sync
-import json2
+import x.json2
 
 @[heap]
 struct Observations {

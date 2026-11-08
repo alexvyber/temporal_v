@@ -1,9 +1,9 @@
 module example_storage
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import os
-import json2
+import x.json2
 import crypto.sha256
 import crypto.rand
 import time

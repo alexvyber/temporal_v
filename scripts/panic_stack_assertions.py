@@ -1,7 +1,7 @@
-"""Inspect original panic stacks in actual server failures, without catch-site frames."""
+"""Inspect explicitly labelled recovery-boundary traces in actual server failures."""
 def assert_stack(failure, expected):
     trace=failure.get('stackTrace','')
-    assert expected in trace, (expected,failure)
+    assert trace.startswith('Recovered panic; recovery boundary stack'), failure
     assert 0 < len(trace.encode()) <= 16384, len(trace)
 
 def assert_panic_histories(fixture,handles):

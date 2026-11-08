@@ -1,6 +1,6 @@
 module workflows
 
-import sdk
+import alexvyber.temporal_v.sdk
 import time
 
 struct LoggedWorkflow {

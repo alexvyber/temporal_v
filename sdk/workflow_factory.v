@@ -18,11 +18,13 @@ fn invoke_workflow_factory(factory WorkflowFactory, view WorkflowContextView, in
 }
 
 fn recover_workflow_factory(factory WorkflowFactory, view WorkflowContextView, inputs []PayloadValue, mut outcome WorkflowFactoryOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}

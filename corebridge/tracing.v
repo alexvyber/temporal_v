@@ -35,7 +35,7 @@ pub fn new_trace_exporter_bridge(configuration string) !&TraceExporterBridge {
 	options := configuration.bytes()
 	result := C.temporal_core_trace_exporter_new(unsafe { nil }, C.TemporalCoreByteArrayRef{
 		data: options.data
-		size: uint(options.len)
+		size: u32(options.len)
 	})
 	if !isnil(result.failure) {
 		message := unsafe { result.failure.vstring().clone() }
@@ -57,7 +57,7 @@ pub fn (bridge &TraceExporterBridge) export(spans []u8, timeout_millis u64) ! {
 	if state.closed { return error('trace exporter is closed') }
 	failure := C.temporal_core_trace_exporter_export(state.native, C.TemporalCoreByteArrayRef{
 		data: spans.data
-		size: uint(spans.len)
+		size: u32(spans.len)
 	}, timeout_millis)
 	if !isnil(failure) {
 		message := unsafe { failure.vstring().clone() }

@@ -1,9 +1,9 @@
 module example_interceptors
 
-import sdk
-import corebridge
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.corebridge
 import os
-import temporal
+import alexvyber.temporal_v.temporal
 
 // Fixture interceptors demonstrate immutable, thread-safe chain registration.
 struct ClientTrace {

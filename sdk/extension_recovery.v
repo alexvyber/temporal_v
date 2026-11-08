@@ -1,6 +1,6 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 
 struct GrpcCallbackOutcome {
 mut:
@@ -16,11 +16,13 @@ fn invoke_grpc_transport(transport GrpcTransport, context &GrpcTransportContext,
 }
 
 fn recover_grpc_transport(transport GrpcTransport, context &GrpcTransportContext, request corebridge.GrpcRequestSnapshot, mut outcome GrpcCallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -37,11 +39,13 @@ fn invoke_metric_export(exporter MetricExporter, context &MetricExportContext, v
 }
 
 fn recover_metric_export(exporter MetricExporter, context &MetricExportContext, values []MetricSample, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -58,11 +62,13 @@ fn invoke_metric_shutdown(exporter MetricExporterShutdown, context &MetricExport
 }
 
 fn recover_metric_shutdown(exporter MetricExporterShutdown, context &MetricExportContext, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -79,11 +85,13 @@ fn invoke_trace_export(exporter TraceExporter, context &TraceExportContext, valu
 }
 
 fn recover_trace_export(exporter TraceExporter, context &TraceExportContext, values []TraceSpanData, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -100,11 +108,13 @@ fn invoke_trace_shutdown(exporter TraceExporterShutdown, context &TraceExportCon
 }
 
 fn recover_trace_shutdown(exporter TraceExporterShutdown, context &TraceExportContext, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}

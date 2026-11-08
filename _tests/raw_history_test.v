@@ -1,7 +1,7 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 
 fn test_raw_history_preserves_order_payloads_and_unknown_wire_fields() ! {
 	first := temporal.TemporalApiHistoryV1_History{

@@ -1,14 +1,14 @@
 module main
 
 import flag
-import json2
+import x.json2
 import os
 import rand
-import sdk
+import alexvyber.temporal_v.sdk
 import crypto.sha256
-import example_converter
-import example_tuning
-import temporal
+import alexvyber.temporal_v.example_converter
+import alexvyber.temporal_v.example_tuning
+import alexvyber.temporal_v.temporal
 import time
 
 fn argument(value string) temporal.TemporalApiCommonV1_Payloads {

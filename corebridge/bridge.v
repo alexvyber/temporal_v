@@ -11,7 +11,7 @@ struct C.SpikeCore {}
 @[typedef]
 struct C.TemporalCoreByteArray {
 	data &u8
-	size uint
+	size u32
 }
 
 fn C.spike_protocol_capabilities() u64
@@ -19,21 +19,21 @@ fn C.spike_protocol_capabilities() u64
 fn C.spike_open(&C.SpikeConnectOptions, &C.SpikeWorkerOptions, bool, bool, bool) &C.SpikeCore
 fn C.spike_open_shared(&C.SpikeCore, &C.SpikeWorkerOptions, bool, bool, bool) &C.SpikeCore
 fn C.spike_client_open(&C.SpikeConnectOptions) &C.SpikeCore
-fn C.spike_rpc(&C.SpikeCore, u32, &char, &u8, uint, u32, C.TemporalCoreByteArrayRefArray, C.TemporalCoreByteArrayRefArray, bool, &C.TemporalCoreCancellationToken, &&C.TemporalCoreByteArray) &C.TemporalCoreByteArray
+fn C.spike_rpc(&C.SpikeCore, u32, &char, &u8, u32, u32, C.TemporalCoreByteArrayRefArray, C.TemporalCoreByteArrayRefArray, bool, &C.TemporalCoreCancellationToken, &&C.TemporalCoreByteArray) &C.TemporalCoreByteArray
 fn C.spike_rpc_status() u32
 fn C.spike_error(&C.SpikeCore) &char
 fn C.spike_poll(&C.SpikeCore) &C.TemporalCoreByteArray
 fn C.spike_poll_workflow(&C.SpikeCore) &C.TemporalCoreByteArray
-fn C.spike_complete(&C.SpikeCore, &u8, uint) int
-fn C.spike_complete_workflow(&C.SpikeCore, &u8, uint) int
-fn C.spike_heartbeat(&C.SpikeCore, &u8, uint) int
+fn C.spike_complete(&C.SpikeCore, &u8, u32) int
+fn C.spike_complete_workflow(&C.SpikeCore, &u8, u32) int
+fn C.spike_heartbeat(&C.SpikeCore, &u8, u32) int
 fn C.spike_bytes_free(&C.SpikeCore, &C.TemporalCoreByteArray)
 fn C.spike_poll_nexus(&C.SpikeCore) &C.TemporalCoreByteArray
-fn C.spike_complete_nexus(&C.SpikeCore, &u8, uint) int
+fn C.spike_complete_nexus(&C.SpikeCore, &u8, u32) int
 fn C.spike_shutdown(&C.SpikeCore)
 fn C.spike_shutdown_grace_expired(&C.SpikeCore) bool
 fn C.spike_replay_open(&char, &char) &C.SpikeCore
-fn C.spike_replay_push(&C.SpikeCore, &char, &u8, uint) int
+fn C.spike_replay_push(&C.SpikeCore, &char, &u8, u32) int
 fn C.spike_close(&C.SpikeCore)
 
 pub struct Config {
@@ -198,13 +198,13 @@ fn (connection &Connection) rpc_native(service RpcService, method string, reques
 	if state.closed { return error('connection is closed') }
 
 	mut details := unsafe { &C.TemporalCoreByteArray(nil) }
-	bytes := C.spike_rpc(connection.core, u32(service), method.str, request.data,
-		uint(request.len), timeout_millis, C.TemporalCoreByteArrayRefArray{
+	bytes := C.spike_rpc(connection.core, u32(service), method.str, request.data, u32(request.len),
+		timeout_millis, C.TemporalCoreByteArrayRefArray{
 		data: values.data
-		size: uint(values.len)
+		size: u32(values.len)
 	}, C.TemporalCoreByteArrayRefArray{
 		data: binary_values.data
-		size: uint(binary_values.len)
+		size: u32(binary_values.len)
 	}, options.retry, cancellation, &details)
 	mut error_details := []u8{}
 	if !isnil(details) {
@@ -280,19 +280,23 @@ pub fn open(config Config, kind WorkerKind) !&Connection {
 	if config.connection != none && config.telemetry.metric_starter != none {
 		return error('shared workers inherit the client metric exporter')
 	}
-	metric_bridge := if connection := config.connection {
-		connection.metric_export_bridge
+	mut metric_bridge := ?&MetricExportBridge(none)
+	if connection := config.connection {
+		metric_bridge = connection.metric_export_bridge
 	} else {
-		(start_metric_export(config.telemetry)!).bridge
+		startup := start_metric_export(config.telemetry)!
+		metric_bridge = startup.bridge
 	}
 	mut initialized := false
 	defer {
 		if !initialized && config.connection == none { abandon_metric_export(metric_bridge) }
 	}
-	bridge := if connection := config.connection {
-		connection.grpc_bridge
+	mut bridge := ?&GrpcBridge(none)
+	if connection := config.connection {
+		bridge = connection.grpc_bridge
 	} else {
-		(start_grpc(config.transport)!).bridge
+		startup := start_grpc(config.transport)!
+		bridge = startup.bridge
 	}
 	defer {
 		if !initialized && config.connection == none { abandon_grpc(bridge) }
@@ -358,9 +362,9 @@ pub fn (connection &Connection) complete(bytes []u8, workflow bool) ! {
 	if state.closed { return error('connection is closed') }
 
 	status := if workflow {
-		C.spike_complete_workflow(connection.core, bytes.data, uint(bytes.len))
+		C.spike_complete_workflow(connection.core, bytes.data, u32(bytes.len))
 	} else {
-		C.spike_complete(connection.core, bytes.data, uint(bytes.len))
+		C.spike_complete(connection.core, bytes.data, u32(bytes.len))
 	}
 	if status != 0 { connection.check()! }
 }
@@ -371,7 +375,7 @@ pub fn (connection &Connection) heartbeat(bytes []u8) ! {
 	defer { state.mutex.runlock() }
 	if state.closed { return error('connection is closed') }
 
-	if C.spike_heartbeat(connection.core, bytes.data, uint(bytes.len)) != 0 { connection.check()! }
+	if C.spike_heartbeat(connection.core, bytes.data, u32(bytes.len)) != 0 { connection.check()! }
 }
 
 pub fn (connection &Connection) shutdown() {
@@ -413,7 +417,7 @@ pub fn (connection &Connection) replay_push(workflow_id string, history []u8) ! 
 	defer { state.mutex.runlock() }
 	if state.closed { return error('connection is closed') }
 
-	if C.spike_replay_push(connection.core, workflow_id.str, history.data, uint(history.len)) != 0 {
+	if C.spike_replay_push(connection.core, workflow_id.str, history.data, u32(history.len)) != 0 {
 		connection.check()!
 	}
 }
@@ -459,7 +463,7 @@ pub fn (connection &Connection) complete_nexus(bytes []u8) ! {
 	state.mutex.rlock()
 	defer { state.mutex.runlock() }
 	if state.closed { return error('connection is closed') }
-	if C.spike_complete_nexus(connection.core, bytes.data, uint(bytes.len)) != 0 {
+	if C.spike_complete_nexus(connection.core, bytes.data, u32(bytes.len)) != 0 {
 		connection.check()!
 	}
 }

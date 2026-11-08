@@ -1,7 +1,7 @@
 module sdk
 
-import temporal
-import corebridge
+import alexvyber.temporal_v.temporal
+import alexvyber.temporal_v.corebridge
 
 // Called immediately before submitting a completion to Core, after outbound
 // codecs and external storage. Each observer receives an independent snapshot.
@@ -23,11 +23,13 @@ fn notify_worker_completion(interceptors []WorkerInterceptor, bytes []u8, logger
 }
 
 fn recover_worker_completion(interceptor WorkerCompletionInterceptor, bytes []u8, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}

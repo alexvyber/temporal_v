@@ -1,6 +1,6 @@
 module sdk
 
-import corebridge
+import alexvyber.temporal_v.corebridge
 import os
 import strconv
 import time
@@ -199,6 +199,8 @@ fn (options WorkerOptions) core_config() !corebridge.Config {
 			storage_drivers << driver.driver_type()
 		}
 	}
+	mut connection := ?&corebridge.Connection(none)
+	if client := options.client { connection = client.connection }
 	mut config := corebridge.Config{
 		plugins:                                   options.plugin_information.map(corebridge.PluginInfo{
 			name:    it.name
@@ -206,11 +208,7 @@ fn (options WorkerOptions) core_config() !corebridge.Config {
 		})
 		disable_payload_error_limit:               options.disable_payload_error_limit
 		storage_drivers:                           storage_drivers
-		connection:                                if client := options.client {
-			?&corebridge.Connection(client.connection)
-		} else {
-			none
-		}
+		connection:                                connection
 		workflow_poller_autoscaling:               poller_autoscaling(options.workflow_poller_autoscaling)!
 		activity_poller_autoscaling:               poller_autoscaling(options.activity_poller_autoscaling)!
 		nexus_poller_autoscaling:                  poller_autoscaling(options.nexus_poller_autoscaling)!

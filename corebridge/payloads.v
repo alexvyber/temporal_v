@@ -1,13 +1,13 @@
 module corebridge
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 #include "@DIR/../native/payloads.h"
 
 @[typedef]
 struct C.TemporalVPayloadBytes {
 	data &u8
-	size uint
+	size u32
 }
 
 @[typedef]
@@ -16,7 +16,7 @@ struct C.TemporalVPayloadVisitResult {
 	failure &C.TemporalVPayloadBytes
 }
 
-fn C.temporal_v_payload_visit(u32, u32, &u8, uint, &u8, uint, bool) C.TemporalVPayloadVisitResult
+fn C.temporal_v_payload_visit(u32, u32, &u8, u32, &u8, u32, bool) C.TemporalVPayloadVisitResult
 fn C.temporal_v_payload_bytes_free(&C.TemporalVPayloadBytes)
 
 pub enum PayloadMessageKind {
@@ -51,7 +51,7 @@ pub:
 fn visit_payload_message(kind PayloadMessageKind, input []u8, restore bool, options PayloadMessageOptions) ![]u8 {
 	validate_text(options.method, 'payload RPC method')!
 	result := C.temporal_v_payload_visit(u32(kind), u32(options.service), options.method.str,
-		uint(options.method.len), input.data, uint(input.len), restore)
+		u32(options.method.len), input.data, u32(input.len), restore)
 	defer {
 		if !isnil(result.body) { C.temporal_v_payload_bytes_free(result.body) }
 		if !isnil(result.failure) { C.temporal_v_payload_bytes_free(result.failure) }

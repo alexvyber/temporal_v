@@ -1,8 +1,8 @@
 module sdk
 
-import protobuf
+import alexvyber.temporal_v.protobuf
 import encoding.utf8
-import temporal
+import alexvyber.temporal_v.temporal
 
 pub interface PayloadConverter {
 	to_payload(value PayloadValue, context SerializationContext) !temporal.TemporalApiCommonV1_Payload

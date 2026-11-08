@@ -1,10 +1,10 @@
 module main
 
-import sdk
-import example_storage
-import example_converter
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.example_storage
+import alexvyber.temporal_v.example_converter
 import os
-import json2
+import x.json2
 import sync
 import time
 

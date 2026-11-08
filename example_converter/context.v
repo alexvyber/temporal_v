@@ -1,8 +1,8 @@
 module example_converter
 
-import sdk
-import temporal
-import json2
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
+import x.json2
 
 const value_context_key = 'temporal-v/value-context'
 const codec_context_key = 'temporal-v/codec-context'

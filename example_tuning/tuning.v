@@ -1,11 +1,11 @@
 module example_tuning
 
-import sdk
+import alexvyber.temporal_v.sdk
 import sync
 import time
-import json2
-import workflows
-import example_activities
+import x.json2
+import alexvyber.temporal_v.workflows
+import alexvyber.temporal_v.example_activities
 
 struct SupplierState {
 mut:

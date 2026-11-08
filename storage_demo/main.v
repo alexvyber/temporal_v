@@ -1,10 +1,10 @@
 module main
 
-import sdk
+import alexvyber.temporal_v.sdk
 import os
-import json2
+import x.json2
 import time
-import example_converter
+import alexvyber.temporal_v.example_converter
 
 struct StorageWorkflow {
 mut:

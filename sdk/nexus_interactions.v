@@ -1,6 +1,6 @@
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 pub fn (mut context NexusContext) query_workflow(original &Client, workflow WorkflowHandle, name string, arguments Arguments, options QueryOptions) !NexusResult {
 	client := context.trace_client(original)!

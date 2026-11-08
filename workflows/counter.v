@@ -1,7 +1,7 @@
 module workflows
 
-import json2
-import sdk
+import x.json2
+import alexvyber.temporal_v.sdk
 import time
 
 struct CounterInput {

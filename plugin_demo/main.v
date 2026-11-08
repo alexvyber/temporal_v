@@ -1,12 +1,12 @@
 module main
 
-import sdk
-import temporal
+import alexvyber.temporal_v.sdk
+import alexvyber.temporal_v.temporal
 import os
 import sync
 import time
-import json2
-import example_converter
+import x.json2
+import alexvyber.temporal_v.example_converter
 
 @[heap]
 struct Counters {

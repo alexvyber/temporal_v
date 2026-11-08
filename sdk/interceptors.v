@@ -1,7 +1,7 @@
 module sdk
 
-import corebridge
-import temporal
+import alexvyber.temporal_v.corebridge
+import alexvyber.temporal_v.temporal
 import time
 
 // Client interceptors run for every unary RPC, including long polls and Update waits.
@@ -79,14 +79,12 @@ pub fn (next ClientNext) execute(request ClientRpcRequest) ![]u8 {
 			1
 		})
 	}
+	mut rpc_cancellation := ?&corebridge.RpcCancellation(none)
+	if cancellation := request.cancellation { rpc_cancellation = cancellation.token }
 	reply := next.client.connection.rpc(request.service, request.method, body, timeout,
 		metadata:     request.metadata
 		retry:        request.retry
-		cancellation: if cancellation := request.cancellation {
-			?&corebridge.RpcCancellation(cancellation.token)
-		} else {
-			none
-		}
+		cancellation: rpc_cancellation
 	) or {
 		if err is corebridge.RpcError {
 			return RpcError{
@@ -338,11 +336,13 @@ pub fn (next ActivityNext) execute(mut context ActivityContext, input []string) 
 }
 
 fn (next ActivityNext) execute_recovered(mut context ActivityContext, input []string, mut outcome CallbackValueOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -359,11 +359,13 @@ pub fn (next WorkflowNext) execute(event Event, mut context WorkflowContext) ! {
 }
 
 fn (next WorkflowNext) execute_recovered(event Event, mut context WorkflowContext, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -381,11 +383,13 @@ pub fn (next QueryNext) execute(name string, input []string) !PayloadValue {
 }
 
 fn (next QueryNext) execute_recovered(name string, input []string, mut outcome CallbackValueOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}
@@ -402,11 +406,13 @@ pub fn (next UpdateValidatorNext) execute(name string, input []string) ! {
 }
 
 fn (next UpdateValidatorNext) execute_recovered(name string, input []string, mut outcome CallbackOutcome) {
-	defer {
-		if message := recover() {
-			outcome.failure = PanicError{
-				message:     message
-				stack_trace: recovered_panic_stack_trace()
+	$if v3_backend ? {
+		defer {
+			if message := recover() {
+				outcome.failure = PanicError{
+					message:     message
+					stack_trace: recovery_stack_trace()
+				}
 			}
 		}
 	}

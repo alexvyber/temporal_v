@@ -2,7 +2,7 @@
 // Low-level calls use explicit namespace/options in their generated request.
 module sdk
 
-import temporal
+import alexvyber.temporal_v.temporal
 
 pub fn (client &Client) rpc_health_check(request temporal.GrpcHealthV1_HealthCheckRequest) !temporal.GrpcHealthV1_HealthCheckResponse {
 	return temporal.GrpcHealthV1_HealthCheckResponse.decode(client.call(.health, 'Check',
