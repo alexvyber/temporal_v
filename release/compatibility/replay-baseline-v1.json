@@ -1,7 +1,7 @@
 {
-  "baseline": "SDK120 V API / corrected current Core",
-  "source_sha256": "aed0669fea58add409d82d5763a24065dc9944340098041076726a8fe56bb6b9",
-  "archive_sha256": "714eb9cbd58d779c4047ceaf9e0383e7157ea219e34756e6ffa97441edc535f4",
+  "baseline": "replay-baseline-v1",
+  "source_sha256": "5ae62d1187ed20499f6cf508f1c995ca0889748bff8159a8ac63615d42b9f33b",
+  "archive_sha256": "5b8538f88c9fe0f2a9f1a46fef8ffc9e033bf9ce7ecd7fc2d870558379ae996d",
   "archive_prefix": "v-sdk/",
   "validated_host_reports": 120,
   "purpose": "Compile the unchanged prior V SDK on each target against the same corrected Core, then test live API upgrade/rollback and dual replay. Old Core14 native images contain the captured LA/SideEffect replay defect and are excluded from supported rollback artifacts."

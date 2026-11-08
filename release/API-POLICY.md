@@ -17,11 +17,14 @@ views retain opaque encodings. Factory errors fail the workflow task for retry;
 factory panics retain the original stack and obey the workflow panic policy.
 
 Source API compatibility and workflow-history compatibility are separate gates.
-`upgrade_replay_probe.py` compiles and runs the archived, unchanged SDK120 source
-on each target. It checks SIGKILL handoffs in both directions, accepted Updates,
+`replay-baseline-v1` is a frozen regression-test fixture, not a published SDK
+release. Its archive and metadata live in `release/compatibility/`.
+`build_replay_baseline_v1.py` builds its worker, Activity, and replay executables.
+`upgrade_replay_probe.py` runs the archived V implementation on each target.
+It checks SIGKILL handoffs in both directions, accepted Updates,
 deduplication, signals, remote/local Activities, protected failures, child
-workflows, cancellation, patches and continue-as-new. Both SDKs replay the
-resulting histories. An incompatible implementation must fail replay. This
+workflows, cancellation, patches and continue-as-new. Both V implementations
+replay the resulting histories. An incompatible implementation must fail replay. This
 establishes compatibility for this corpus, not for arbitrary application changes.
 
 Before each deployment, replay exported histories of the application's own
@@ -45,9 +48,9 @@ each marker once. These workflows retain more history during replay; use
 continue-as-new to bound long-lived histories.
 
 Workers require the native marker-lookahead capability and reject older native
-libraries. The SDK120 compatibility image compiles the unchanged prior V API
-against the same corrected Core. This is an API-compatibility test fixture, not
-an application deployment image. Production rollback images must include the
+libraries. The `replay-baseline-v1` compatibility image compiles the unchanged
+prior V API against the same corrected Core. This is an API-compatibility test
+fixture, not an application deployment image. Production rollback images must include the
 native replay fix and the shutdown fixes required by their application. Core14
 images have the captured replay defect and are not rollback candidates.
 The compatibility matrix verifies V SDK upgrades on the pinned, corrected Core;

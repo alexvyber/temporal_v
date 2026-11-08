@@ -1410,7 +1410,7 @@ features have focused normal/optimized/instrumented evidence; their combined
 health timeouts and release_ready remains false.
 
 
-SDK120 implements experimental Event Groups from the pinned Rust workflow SDK.
+replay-baseline-v1 implements experimental Event Groups from the pinned Rust workflow SDK.
 Explicit synchronous scopes compose and restore, direct values override by key,
 signal/Update handlers use implicit originating IDs, and UI label encoding bypasses
 the application converter while retaining workflow codec scope. Command emission
@@ -1577,7 +1577,7 @@ has not passed the aggregate host or Linux gates and is not a production release
 
 
 Integration candidate 1.0.0-rc.1 freezes major-1 public declarations and adds
-SDK120 live upgrade/rollback plus dual replay to the full platform suite.
+replay-baseline-v1 live upgrade/rollback plus dual replay to the full platform suite.
 It includes SDK131 activation observers, SDK132 cooperative local shutdown,
 SDK133 read-only interaction contexts and SDK134 contextual factories.
 The integration and both Linux architecture gates are pending; release_ready=false.
@@ -1591,7 +1591,7 @@ SideEffect were committed in different workflow tasks. The captured history fail
 deterministically on the old runtime. The marker lookahead fix and pagination
 regressions passed 783 Rust client/Core/bridge unit tests, with one upstream ignore.
 The maintained patch/source lock and native capability guard include the fix.
-SDK120 side-effect replay joins the build, bringing bound artifacts to 48.
+replay-baseline-v1 side-effect replay joins the build, bringing bound artifacts to 48.
 The fixed V/native build, full 137-report Linux amd64/arm64 gates and runtime
 container replay remain pending. The API is still frozen at 1.0.0-rc.1 and
 release_ready=false.

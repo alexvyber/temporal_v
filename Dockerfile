@@ -29,9 +29,9 @@ RUN --mount=type=cache,id=temporal-v-${TARGETARCH}-rust-1-99-1,target=/build/art
     cp /build/artifacts/rust-target/release/libtemporalio_sdk_core_c_bridge.so /build/artifacts/rust-target/release/libtemporal_v_payloads.so /opt/v-sdk/lib/
 
 RUN for binary in /opt/v-sdk/bin/*; do patchelf --set-rpath '$ORIGIN/../lib' "$binary"; done
-RUN mkdir -p /opt/upgrade-baseline-bin && \
-    cp /build/artifacts/tools/v-upgrade-baseline-worker /build/artifacts/tools/v-upgrade-baseline-activities /build/artifacts/tools/v-upgrade-baseline-replay /build/artifacts/tools/v-upgrade-baseline-side-effects /opt/upgrade-baseline-bin/ && \
-    for binary in /opt/upgrade-baseline-bin/*; do patchelf --set-rpath '$ORIGIN/../lib' "$binary"; done
+RUN mkdir -p /opt/replay-baseline-v1-bin && \
+    cp /build/artifacts/tools/v-replay-baseline-v1-worker /build/artifacts/tools/v-replay-baseline-v1-activities /build/artifacts/tools/v-replay-baseline-v1-replay /build/artifacts/tools/v-replay-baseline-v1-side-effects /opt/replay-baseline-v1-bin/ && \
+    for binary in /opt/replay-baseline-v1-bin/*; do patchelf --set-rpath '$ORIGIN/../lib' "$binary"; done
 
 FROM build AS validation
 RUN mkdir -p /build/artifacts/rust-target/release && \
@@ -46,12 +46,12 @@ ENV PATH=/opt/v-sdk/bin:$PATH
 USER 65532:65532
 ENTRYPOINT ["v-workflow-worker"]
 
-# Prior SDK binaries are test-only and excluded from the normal runtime image.
+# Frozen replay-baseline-v1 binaries are test-only.
 FROM runtime-base AS compatibility-runtime
-COPY --from=build /opt/upgrade-baseline-bin/v-upgrade-baseline-worker /opt/v-sdk/bin/v-workflow-worker
-COPY --from=build /opt/upgrade-baseline-bin/v-upgrade-baseline-activities /opt/v-sdk/bin/v-worker
-COPY --from=build /opt/upgrade-baseline-bin/v-upgrade-baseline-replay /opt/v-sdk/bin/v-replay
+COPY --from=build /opt/replay-baseline-v1-bin/v-replay-baseline-v1-worker /opt/v-sdk/bin/v-workflow-worker
+COPY --from=build /opt/replay-baseline-v1-bin/v-replay-baseline-v1-activities /opt/v-sdk/bin/v-worker
+COPY --from=build /opt/replay-baseline-v1-bin/v-replay-baseline-v1-replay /opt/v-sdk/bin/v-replay
 
-COPY --from=build /opt/upgrade-baseline-bin/v-upgrade-baseline-side-effects /opt/v-sdk/bin/v-side-effects
+COPY --from=build /opt/replay-baseline-v1-bin/v-replay-baseline-v1-side-effects /opt/v-sdk/bin/v-side-effects
 
 FROM runtime-base AS runtime

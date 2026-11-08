@@ -1,4 +1,4 @@
-"""Live SDK120 <-> candidate handoffs plus dual offline replay on each platform."""
+"""Live replay-baseline-v1 <-> candidate handoffs plus dual offline replay on each platform."""
 RESULT_REPORT='upgrade-replay-results.json'
 import argparse,base64,hashlib,json,os,subprocess
 from pathlib import Path
@@ -27,8 +27,8 @@ def compile_producer():
  return binary
 
 def main(worker,replayer,report_name,quick=False):
- old_worker=ARTIFACTS/'tools/v-upgrade-baseline-worker';old_replayer=ARTIFACTS/'tools/v-upgrade-baseline-replay'
- build=json.loads((ARTIFACTS/'upgrade-baseline-build.json').read_text());assert build['passed']
+ old_worker=ARTIFACTS/'tools/v-replay-baseline-v1-worker';old_replayer=ARTIFACTS/'tools/v-replay-baseline-v1-replay'
+ build=json.loads((ARTIFACTS/'replay-baseline-v1-build.json').read_text());assert build['passed']
  for name,expected in build['images'].items():assert digest(Path(name))==expected,'baseline executable changed'
  producer=compile_producer()
  report={'passed':False,'baseline':build['baseline'],'histories':0,'replays':0,'cases':[],'images':{str(p):digest(p) for p in [worker,replayer,old_worker,old_replayer,producer]}}

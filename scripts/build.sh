@@ -221,6 +221,6 @@ build_log="$SPIKE_ARTIFACTS/logs/panic-build.log"
 (cd "$SPIKE_ROOT" && "$SPIKE_V" -d use_bundled_libgc $v_flags -ldflags "$link_flags" -o "$SPIKE_ARTIFACTS/tools/v-panic" panic_demo) > "$build_log" 2>&1
 build_log="$SPIKE_ARTIFACTS/logs/codec-ownership-build.log"
 (cd "$SPIKE_ROOT" && "$SPIKE_V" -d use_bundled_libgc $v_flags -ldflags "$link_flags" -o "$SPIKE_ARTIFACTS/tools/v-codec-ownership" codec_ownership_demo) > "$build_log" 2>&1
-python3 "$SPIKE_ROOT/scripts/build_upgrade_baseline.py"
+python3 "$SPIKE_ROOT/scripts/build_replay_baseline_v1.py"
 python3 "$SPIKE_ROOT/scripts/api_contract.py"
 python3 "$SPIKE_ROOT/scripts/verification.py" build

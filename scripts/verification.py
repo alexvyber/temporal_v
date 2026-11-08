@@ -34,8 +34,8 @@ def compiled_inputs(snapshot):
     files = {name: value for name, value in snapshot['files'].items()
              if Path(name).suffix in ('.v', '.c', '.h', '.rs', '.proto', '.patch') or name == 'v.mod'
              or name.startswith(('locks/', 'patches/'))
-             or name in ('scripts/build.sh', 'scripts/env.sh', 'scripts/bootstrap.sh', 'scripts/generate_service.py', 'scripts/build_payload_bridge.py', 'scripts/harden_protobuf.py', 'scripts/verify_core_source.py', 'scripts/prepare_v_runtime.py', 'scripts/generate_activation_decoder.py', 'scripts/build_upgrade_baseline.py', 'scripts/api_contract.py')
-             or name in ('release/api-contract.json', 'release/compatibility/sdk120.json', 'release/compatibility/sdk120-source.tar.gz')}
+             or name in ('scripts/build.sh', 'scripts/env.sh', 'scripts/bootstrap.sh', 'scripts/generate_service.py', 'scripts/build_payload_bridge.py', 'scripts/harden_protobuf.py', 'scripts/verify_core_source.py', 'scripts/prepare_v_runtime.py', 'scripts/generate_activation_decoder.py', 'scripts/build_replay_baseline_v1.py', 'scripts/api_contract.py')
+             or name in ('release/api-contract.json', 'release/compatibility/replay-baseline-v1.json', 'release/compatibility/replay-baseline-v1-source.tar.gz')}
     return hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
 
 
@@ -55,7 +55,7 @@ def build():
 
     profile = os.environ.get('SPIKE_BUILD_PROFILE', 'debug')
     binaries = {f'tools/{name}': digest(ARTIFACTS / 'tools' / name) for name in
-                ('v/v', 'v-worker', 'v-workflow-worker', 'v-upgrade-baseline-worker', 'v-upgrade-baseline-activities', 'v-upgrade-baseline-replay', 'v-upgrade-baseline-side-effects', 'v-client', 'v-replay', 'v-service', 'v-nexus-worker', 'v-environment', 'v-storage', 'v-plugins', 'v-transport', 'v-metrics', 'v-user-metrics', 'v-profiles', 'v-grpc', 'v-eager-activity', 'v-metric-export', 'v-deployment', 'v-legacy', 'v-schedule', 'v-batch', 'v-protobuf', 'v-protobuf-json', 'v-mixed-values', 'v-typed-values', 'v-raw-history', 'v-wait-deadlines', 'v-metadata-transport', 'v-visibility', 'v-concurrency', 'v-management', 'v-workflow-pause', 'v-replay-batch', 'v-side-effects', 'v-tracing', 'v-panic', 'v-codec-ownership', 'protobuf-rust-oracle', 'payload-bridge-tests', 'temporal', 'temporal-protocol', 'test-server-1.40.0/temporal-test-server')}
+                ('v/v', 'v-worker', 'v-workflow-worker', 'v-replay-baseline-v1-worker', 'v-replay-baseline-v1-activities', 'v-replay-baseline-v1-replay', 'v-replay-baseline-v1-side-effects', 'v-client', 'v-replay', 'v-service', 'v-nexus-worker', 'v-environment', 'v-storage', 'v-plugins', 'v-transport', 'v-metrics', 'v-user-metrics', 'v-profiles', 'v-grpc', 'v-eager-activity', 'v-metric-export', 'v-deployment', 'v-legacy', 'v-schedule', 'v-batch', 'v-protobuf', 'v-protobuf-json', 'v-mixed-values', 'v-typed-values', 'v-raw-history', 'v-wait-deadlines', 'v-metadata-transport', 'v-visibility', 'v-concurrency', 'v-management', 'v-workflow-pause', 'v-replay-batch', 'v-side-effects', 'v-tracing', 'v-panic', 'v-codec-ownership', 'protobuf-rust-oracle', 'payload-bridge-tests', 'temporal', 'temporal-protocol', 'test-server-1.40.0/temporal-test-server')}
     library = f'rust-target/{profile}/libtemporalio_sdk_core_c_bridge.' + ('dylib' if platform.system() == 'Darwin' else 'so')
     binaries[library] = digest(ARTIFACTS / library)
     payload_library = f'rust-target/{profile}/libtemporal_v_payloads.' + ('dylib' if platform.system() == 'Darwin' else 'so')

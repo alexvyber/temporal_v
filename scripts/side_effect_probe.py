@@ -65,7 +65,7 @@ def main(binary=BINARY,report_name=RESULT_REPORT,codecs=('', 'prefix', 'context'
         with tempfile.TemporaryDirectory(prefix='side-effect-boundary-',dir=ARTIFACTS) as scratch:
             environment=dict(os.environ,V_SDK_EXAMPLE_CODEC='prefix',V_SDK_EXAMPLE_STORAGE_DIR='',V_EFFECT_COUNTS='',V_EFFECT_FORBID='1',V_EFFECT_JOURNAL=str(Path(scratch)/'forbidden-callbacks'),V_EFFECT_CONFIG=str(Path(scratch)/'must-not-be-read'))
             regression_images={}
-            for replay_binary in [BINARY,ARTIFACTS/'tools/v-upgrade-baseline-side-effects']:
+            for replay_binary in [BINARY,ARTIFACTS/'tools/v-replay-baseline-v1-side-effects']:
                 regression_images[str(replay_binary)]=hashlib.sha256(replay_binary.read_bytes()).hexdigest()
                 replay=subprocess.run([str(replay_binary),'replay',str(fixture/'history.bin'),captured['workflow_id'],captured['task_queue']],cwd=ROOT,env=environment,capture_output=True,text=True,timeout=45)
                 (ARTIFACTS/'logs'/('side-effect-boundary-'+replay_binary.name+'-'+report_name+'.log')).write_text(replay.stdout+replay.stderr)

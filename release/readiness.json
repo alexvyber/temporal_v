@@ -535,7 +535,7 @@
     {
       "id": "sdk-upgrade-replay",
       "status": "partial",
-      "detail": "Unchanged frozen SDK120 sources compiled for each target. Live upgrade/rollback and dual replayer corpus implemented; validation pending.",
+      "detail": "Unchanged frozen replay-baseline-v1 sources compiled for each target. Live upgrade/rollback and dual replayer corpus implemented; validation pending.",
       "local_evidence": [
         "upgrade-replay-results.json"
       ]

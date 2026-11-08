@@ -2084,7 +2084,8 @@ A captured Linux replay regression now covers local-Activity heartbeat boundarie
 Core can record the Activity result in one workflow task and its following
 SideEffect in the next. The fixed Core preloads marker values across task and
 page boundaries before replaying the callback. The source-locked history is
-replayed by both current and archived SDK120 V implementations on corrected Core.
+replayed by both current and archived `replay-baseline-v1` V implementations on
+corrected Core. This baseline is a frozen test fixture, not a published SDK release.
 See `release/API-POLICY.md` for replay memory behavior and supported rollback images.
 Workers reject native libraries without the marker-lookahead capability.
 
