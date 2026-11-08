@@ -1,0 +1,44 @@
+[
+  {
+    "name": "StartWorkflow:v.trace.interop",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "05f889126578e02c",
+    "trace_id": "c12cd09de968403fa00134871986b27b"
+  },
+  {
+    "name": "SignalWorkflow:ready",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "e1f8a4944850780b",
+    "trace_id": "c12cd09de968403fa00134871986b27b"
+  },
+  {
+    "name": "HandleSignal:ready",
+    "parent_span_id": "e1f8a4944850780b",
+    "span_id": "9d0f54dc8d588801",
+    "trace_id": "c12cd09de968403fa00134871986b27b"
+  },
+  {
+    "name": "HandleSignal:ready",
+    "parent_span_id": "e1f8a4944850780b",
+    "span_id": "cf36a877bbd0a2a7",
+    "trace_id": "c12cd09de968403fa00134871986b27b"
+  },
+  {
+    "name": "HandleQuery:state",
+    "parent_span_id": "f0106c2336d06d25",
+    "span_id": "4d396a153972d42e",
+    "trace_id": "c12cd09de968403fa00134871986b27b"
+  },
+  {
+    "name": "HandleQuery:state",
+    "parent_span_id": "f0106c2336d06d25",
+    "span_id": "3452dd4b2efe0db5",
+    "trace_id": "c12cd09de968403fa00134871986b27b"
+  },
+  {
+    "name": "QueryWorkflow:state",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "f0106c2336d06d25",
+    "trace_id": "c12cd09de968403fa00134871986b27b"
+  }
+]

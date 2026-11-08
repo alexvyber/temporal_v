@@ -1,0 +1,331 @@
+{
+  "events": [
+    {
+      "eventId": "1",
+      "eventTime": "2026-11-07T00:50:37.485936Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED",
+      "taskId": "1048646",
+      "workflowExecutionStartedEventAttributes": {
+        "workflowType": {
+          "name": "v.update-lifecycle"
+        },
+        "taskQueue": {
+          "name": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "IndhaXQi"
+            }
+          ]
+        },
+        "workflowExecutionTimeout": "60s",
+        "workflowRunTimeout": "60s",
+        "workflowTaskTimeout": "10s",
+        "originalExecutionRunId": "01a1b37c-692d-7e40-a1ff-bacdd4f572bc",
+        "identity": "temporal-v",
+        "firstExecutionRunId": "01a1b37c-692d-7e40-a1ff-bacdd4f572bc",
+        "attempt": 1,
+        "workflowExecutionExpirationTime": "2026-11-07T00:51:37.486Z",
+        "firstWorkflowTaskBackoff": "0s",
+        "header": {},
+        "workflowId": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234-cancel"
+      }
+    },
+    {
+      "eventId": "2",
+      "eventTime": "2026-11-07T00:50:37.486023Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "taskId": "1048647",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "3",
+      "eventTime": "2026-11-07T00:50:37.488353Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "taskId": "1048653",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "42636@Alexeys-MacBook-Pro.local@",
+        "requestId": "ca0c1e7e-dfae-4f1f-9bb5-00bacb2d5a43",
+        "historySizeBytes": "433",
+        "workerVersion": {
+          "buildId": "c9ad1df09f1cfd95fd7214e7f9573dc8"
+        }
+      }
+    },
+    {
+      "eventId": "4",
+      "eventTime": "2026-11-07T00:50:37.491488Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "taskId": "1048657",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "2",
+        "startedEventId": "3",
+        "identity": "42636@Alexeys-MacBook-Pro.local@",
+        "workerVersion": {
+          "buildId": "c9ad1df09f1cfd95fd7214e7f9573dc8"
+        },
+        "sdkMetadata": {
+          "langUsedFlags": [
+            4,
+            3
+          ],
+          "sdkName": "temporal-go",
+          "sdkVersion": "1.35.0"
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "5",
+      "eventTime": "2026-11-07T00:50:37.506065Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "taskId": "1048664",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "Alexeys-MacBook-Pro.local:f9a0586d-7718-4e69-92d8-28029811d5fb",
+          "kind": "TASK_QUEUE_KIND_STICKY",
+          "normalName": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234"
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "6",
+      "eventTime": "2026-11-07T00:50:37.506470Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "taskId": "1048665",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "5",
+        "identity": "42636@Alexeys-MacBook-Pro.local@",
+        "requestId": "97325a45-de95-4277-a983-3d692c34efed",
+        "historySizeBytes": "702",
+        "workerVersion": {
+          "buildId": "c9ad1df09f1cfd95fd7214e7f9573dc8"
+        }
+      }
+    },
+    {
+      "eventId": "7",
+      "eventTime": "2026-11-07T00:50:37.508333Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "taskId": "1048666",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "5",
+        "startedEventId": "6",
+        "identity": "42636@Alexeys-MacBook-Pro.local@",
+        "workerVersion": {
+          "buildId": "c9ad1df09f1cfd95fd7214e7f9573dc8"
+        },
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "8",
+      "eventTime": "2026-11-07T00:50:37.508421Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED",
+      "taskId": "1048667",
+      "workflowExecutionUpdateAcceptedEventAttributes": {
+        "protocolInstanceId": "warning-cancel",
+        "acceptedRequestMessageId": "warning-cancel/request",
+        "acceptedRequestSequencingEventId": "5",
+        "acceptedRequest": {
+          "meta": {
+            "updateId": "warning-cancel",
+            "identity": "temporal-v"
+          },
+          "input": {
+            "header": {},
+            "name": "hold-warn",
+            "args": {
+              "payloads": [
+                {
+                  "metadata": {
+                    "encoding": "anNvbi9wbGFpbg=="
+                  },
+                  "data": "bnVsbA=="
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "eventId": "9",
+      "eventTime": "2026-11-07T00:50:37.522671Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "taskId": "1048674",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "Alexeys-MacBook-Pro.local:f9a0586d-7718-4e69-92d8-28029811d5fb",
+          "kind": "TASK_QUEUE_KIND_STICKY",
+          "normalName": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234"
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "10",
+      "eventTime": "2026-11-07T00:50:37.522955Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "taskId": "1048675",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "9",
+        "identity": "42636@Alexeys-MacBook-Pro.local@",
+        "requestId": "32c3e5df-e283-4765-b271-1816b9acbd64",
+        "historySizeBytes": "1257",
+        "workerVersion": {
+          "buildId": "c9ad1df09f1cfd95fd7214e7f9573dc8"
+        }
+      }
+    },
+    {
+      "eventId": "11",
+      "eventTime": "2026-11-07T00:50:37.524007Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "taskId": "1048676",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "9",
+        "startedEventId": "10",
+        "identity": "42636@Alexeys-MacBook-Pro.local@",
+        "workerVersion": {
+          "buildId": "c9ad1df09f1cfd95fd7214e7f9573dc8"
+        },
+        "sdkMetadata": {},
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "12",
+      "eventTime": "2026-11-07T00:50:37.524056Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_UPDATE_ACCEPTED",
+      "taskId": "1048677",
+      "workflowExecutionUpdateAcceptedEventAttributes": {
+        "protocolInstanceId": "silent-cancel",
+        "acceptedRequestMessageId": "silent-cancel/request",
+        "acceptedRequestSequencingEventId": "9",
+        "acceptedRequest": {
+          "meta": {
+            "updateId": "silent-cancel",
+            "identity": "temporal-v"
+          },
+          "input": {
+            "header": {},
+            "name": "hold-silent",
+            "args": {
+              "payloads": [
+                {
+                  "metadata": {
+                    "encoding": "anNvbi9wbGFpbg=="
+                  },
+                  "data": "bnVsbA=="
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "eventId": "13",
+      "eventTime": "2026-11-07T00:50:37.743528Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_SIGNALED",
+      "taskId": "1048747",
+      "workflowExecutionSignaledEventAttributes": {
+        "signalName": "cancel",
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "bnVsbA=="
+            }
+          ]
+        },
+        "identity": "temporal-v",
+        "header": {},
+        "requestId": "359ce56a-9985-4f41-8104-52492607acf7"
+      }
+    },
+    {
+      "eventId": "14",
+      "eventTime": "2026-11-07T00:50:37.743535Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "taskId": "1048748",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "15",
+      "eventTime": "2026-11-07T00:50:37.744405Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "taskId": "1048751",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "14",
+        "identity": "temporal-v",
+        "requestId": "80d31cbb-5dfe-4ab2-aca2-6c8c8af5345d",
+        "historySizeBytes": "2026",
+        "workerVersion": {
+          "buildId": "temporal-v-dev"
+        }
+      }
+    },
+    {
+      "eventId": "16",
+      "eventTime": "2026-11-07T00:50:37.746250Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "taskId": "1048755",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "14",
+        "startedEventId": "15",
+        "identity": "temporal-v",
+        "workerVersion": {
+          "buildId": "temporal-v-dev"
+        },
+        "sdkMetadata": {
+          "coreUsedFlags": [
+            4,
+            2,
+            1,
+            3
+          ],
+          "sdkName": "temporal-v",
+          "sdkVersion": "0.0.1"
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "17",
+      "eventTime": "2026-11-07T00:50:37.746284Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_CANCELED",
+      "taskId": "1048756",
+      "workflowExecutionCanceledEventAttributes": {
+        "workflowTaskCompletedEventId": "16"
+      }
+    }
+  ]
+}

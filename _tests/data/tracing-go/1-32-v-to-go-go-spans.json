@@ -1,0 +1,62 @@
+[
+  {
+    "name": "HandleQuery:state",
+    "parent_span_id": "f0698886f822b4c8",
+    "span_id": "1c3f3b95a4ec804d",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  },
+  {
+    "name": "HandleQuery:state",
+    "parent_span_id": "f0698886f822b4c8",
+    "span_id": "96976b0af91d074e",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  },
+  {
+    "name": "RunWorkflow:v.trace.interop",
+    "parent_span_id": "48562d62bceab925",
+    "span_id": "546b106d41a1eda6",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  },
+  {
+    "name": "RunWorkflow:v.trace.interop",
+    "parent_span_id": "48562d62bceab925",
+    "span_id": "49eedc6f6be9f951",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  },
+  {
+    "name": "QueryWorkflow:state",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "f0698886f822b4c8",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  },
+  {
+    "name": "SignalWorkflow:finish",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "75f4d5e6fcfe223d",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  },
+  {
+    "name": "HandleSignal:finish",
+    "parent_span_id": "75f4d5e6fcfe223d",
+    "span_id": "afb41b3d07b85406",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  },
+  {
+    "name": "HandleSignal:finish",
+    "parent_span_id": "75f4d5e6fcfe223d",
+    "span_id": "aa715127d11323c6",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  },
+  {
+    "name": "RunWorkflow:v.trace.interop",
+    "parent_span_id": "48562d62bceab925",
+    "span_id": "e23e57c52d402881",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  },
+  {
+    "name": "RunWorkflow:v.trace.interop",
+    "parent_span_id": "48562d62bceab925",
+    "span_id": "df36892f8e7ebb72",
+    "trace_id": "b77b6656429f453ea5550d41cd775433"
+  }
+]

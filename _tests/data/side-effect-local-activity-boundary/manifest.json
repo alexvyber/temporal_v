@@ -1,0 +1,10 @@
+{
+  "workflow_id": "side-effect-1-32-prefix-False-mixed-True-1435f588d08848bba8fa0751ef56051f-0",
+  "run_id": "01a1b6ec-ac44-7d49-8ef6-205fa6f7b58c",
+  "task_queue": "side-effect-1-32-prefix-False-mixed-True-1435f588d08848bba8fa0751ef56051f",
+  "codec": "prefix",
+  "history_sha256": "1c326c9b50d144751edbd9baa676cd00a52ed744ecc371270e277e865a6ca932",
+  "json_sha256": "8cf0fcc3a7cd7d25b9da5f4d38f718ff957fa5761b03957be49ad4ddd8acaf67",
+  "producer": "SDK1/Core14 on Linux arm64, Temporal 1.32.2",
+  "regression": "LA marker event9 belongs to WFT completion4; SideEffect2 event13 belongs to completion12. Replay must fetch and notify the durable value before delivering the LA callback."
+}

@@ -1,0 +1,215 @@
+{
+  "passed": true,
+  "reference": {
+    "sdk": "v1.35.0",
+    "go_toolchain": "go version go1.26.1 darwin/arm64",
+    "sources": {
+      "main.go": "800daac10ace22265939b16a176c11968dc06fea3a21d9001f21972d40c9a21b",
+      "go.mod": "5f8177df16de3238f8c3d2078241a38c4dfa96b968f580d33f5fb49e93e7fec4",
+      "go.sum": "1d09e0236450b6a7ef14ef67d7e98437b29d9f3f52d814bc123f8f0680e275a3"
+    },
+    "binary_sha256": "64e4ac229320d646626fce898eef6dfeb2d97205e55c024f522706bcdf1966db"
+  },
+  "cases": [
+    {
+      "name": "1-32-go-to-v-complete",
+      "workflow_id": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234-complete",
+      "run_id": "01a1b37c-6712-7ee0-852c-1dd25e232c8b",
+      "task_queue": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234",
+      "files": {
+        "1-32-go-to-v-complete.json": "53e241b5a626f9c98668863c3ac5cd4f98dd0c921674dd1bec6470a39a1db63e",
+        "1-32-go-to-v-complete.bin": "30bd29cc6e74ab91c7f2b2055b3e2bf85068fea478b296ec77845c5c5bcb8735"
+      }
+    },
+    {
+      "name": "1-32-go-to-v-continue",
+      "workflow_id": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234-continue",
+      "run_id": "01a1b37c-68f2-718e-9a20-c4befd3a3c81",
+      "task_queue": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234",
+      "files": {
+        "1-32-go-to-v-continue.json": "8515feeba0012864a4606d6c6a7330151991a6894b700ad214840e9c194a1e27",
+        "1-32-go-to-v-continue.bin": "3bae4bacdde25f95b45a4170cea0b752cf2ee83c3e134b53648afc593ec3c6b6"
+      }
+    },
+    {
+      "name": "1-32-go-to-v-cancel",
+      "workflow_id": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234-cancel",
+      "run_id": "01a1b37c-692d-7e40-a1ff-bacdd4f572bc",
+      "task_queue": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234",
+      "files": {
+        "1-32-go-to-v-cancel.json": "c4c5bde83551e6bbb277e12266d3d1a406bc72de961cd19e97c59e1d5de175dd",
+        "1-32-go-to-v-cancel.bin": "4292e2e6d6dd1f2b93dac14b91ba5fb672dadaeb80159fed22c0ae4c2cb90628"
+      }
+    },
+    {
+      "name": "1-32-go-to-v-fail",
+      "workflow_id": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234-fail",
+      "run_id": "01a1b37c-696d-73d8-90e0-5f853a4d6067",
+      "task_queue": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234",
+      "files": {
+        "1-32-go-to-v-fail.json": "0af9a454ca70438ff60630bc3e0710c9b737eb79538df349dfb1732955e8dca6",
+        "1-32-go-to-v-fail.bin": "a2681d0ab8a916ebd46f66a34b42272f8185d1fa9f1749680d888c983c293834"
+      }
+    },
+    {
+      "name": "1-32-go-to-v-next",
+      "workflow_id": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234-continue",
+      "run_id": "c5f30e74-604d-457d-9f63-a4589a49b49b",
+      "task_queue": "handler-go-1-32-go-to-v-7a3b07fe73184ab29bb14901a9734234",
+      "files": {
+        "1-32-go-to-v-next.json": "cc653f4ef5d05505136692c28b02a10d136a273fd3790d2d9f2f40be209dad3f",
+        "1-32-go-to-v-next.bin": "907aae55fb1452d772228e84e28d3367d567db0a8b8d49fe45d3fb40a72a9355"
+      }
+    },
+    {
+      "name": "1-32-v-to-go-complete",
+      "workflow_id": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1-complete",
+      "run_id": "01a1b37c-749c-70fd-86ec-54f11fe34513",
+      "task_queue": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1",
+      "files": {
+        "1-32-v-to-go-complete.json": "34a96a60f0b082fa956ae881ae946447e73eba65a855c2443ce1a5cde7cfc493",
+        "1-32-v-to-go-complete.bin": "12e9d806c0d2e1ed56c78417544f89bd440f32f37377ae357333509a19cbcc48"
+      }
+    },
+    {
+      "name": "1-32-v-to-go-continue",
+      "workflow_id": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1-continue",
+      "run_id": "01a1b37c-74d4-73ad-b9be-1f56d6507470",
+      "task_queue": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1",
+      "files": {
+        "1-32-v-to-go-continue.json": "c730b188be4ce029e33b368662ca5992abad30f03fcdb16e9180db61a3b8a5e3",
+        "1-32-v-to-go-continue.bin": "12a17169601f06ddbdf81a4d30de3cc74370b5302274202d6c7ffeee060214d5"
+      }
+    },
+    {
+      "name": "1-32-v-to-go-cancel",
+      "workflow_id": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1-cancel",
+      "run_id": "01a1b37c-7512-73d4-a490-e2d9d9194462",
+      "task_queue": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1",
+      "files": {
+        "1-32-v-to-go-cancel.json": "e2936568410ccacd083e826c5005f860aa85055c1f2751be9739f70513719799",
+        "1-32-v-to-go-cancel.bin": "785244121a404a152e09e8653335fc829eed26ab1054e9570df6a8b6f14461a7"
+      }
+    },
+    {
+      "name": "1-32-v-to-go-fail",
+      "workflow_id": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1-fail",
+      "run_id": "01a1b37c-7547-72da-870f-9975331f4a24",
+      "task_queue": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1",
+      "files": {
+        "1-32-v-to-go-fail.json": "c972154a341b53c344f4839175a391d8872f05ce0c9805375268af6333f2d927",
+        "1-32-v-to-go-fail.bin": "540978f36f414836fbd46342649de331071bca0faa7c6c6ad91b269dfc93836b"
+      }
+    },
+    {
+      "name": "1-32-v-to-go-next",
+      "workflow_id": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1-continue",
+      "run_id": "c5ae4132-5e72-45a2-b544-0e82e14febb7",
+      "task_queue": "handler-go-1-32-v-to-go-a3f7ae32eeac44b8b87a37acd253ace1",
+      "files": {
+        "1-32-v-to-go-next.json": "eadb2053457c17f5e8320b302f1adc999f57837de776d04faafe1ff03dbb2f08",
+        "1-32-v-to-go-next.bin": "c65141617524a3a1a083415bb2a28396714df9a68951fc308e6827fcb6dc4ed3"
+      }
+    },
+    {
+      "name": "1-33-go-to-v-complete",
+      "workflow_id": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311-complete",
+      "run_id": "01a1b37c-8095-7bbb-a5df-006a547269a5",
+      "task_queue": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311",
+      "files": {
+        "1-33-go-to-v-complete.json": "e12a0fe84b2cbed6a3a3e4932be3c99f327092bc59745c5758d3846b892c6abd",
+        "1-33-go-to-v-complete.bin": "800ddd90f1bc6f37b66fc8bb9dea7d0a83d1fd3c89edc88a47cc3d1df8963a01"
+      }
+    },
+    {
+      "name": "1-33-go-to-v-continue",
+      "workflow_id": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311-continue",
+      "run_id": "01a1b37c-80e7-7e5f-9be8-79997ad9632a",
+      "task_queue": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311",
+      "files": {
+        "1-33-go-to-v-continue.json": "fcd50c2794d12b584e924d043c027709ccc3492aca89bad8a3aa426e4609cedb",
+        "1-33-go-to-v-continue.bin": "964aa0a605f140d4a99f454459c994e1120a27c5a0a4536336503b7cb7bda3d4"
+      }
+    },
+    {
+      "name": "1-33-go-to-v-cancel",
+      "workflow_id": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311-cancel",
+      "run_id": "01a1b37c-811f-7b2b-b073-8424cebc1e90",
+      "task_queue": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311",
+      "files": {
+        "1-33-go-to-v-cancel.json": "7bb0d65d7b7708e08709f86c144acf34e32be1477f26a50a0ad8ee669707ee74",
+        "1-33-go-to-v-cancel.bin": "7798ee1fc3c4f7c662cb1d1c7af70a98f4b1000433e675fb0f8a28a69db4a07f"
+      }
+    },
+    {
+      "name": "1-33-go-to-v-fail",
+      "workflow_id": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311-fail",
+      "run_id": "01a1b37c-8154-712c-a28c-d24ba419c53b",
+      "task_queue": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311",
+      "files": {
+        "1-33-go-to-v-fail.json": "c8b814bb0bc9f15c61aa3342a4eebc737564237648bbd5598b64e89f51d4aaa0",
+        "1-33-go-to-v-fail.bin": "ef3809f02d51712db19b590abeb003aa9ab4bfa1cbd1c8cb2420f8c0b99750df"
+      }
+    },
+    {
+      "name": "1-33-go-to-v-next",
+      "workflow_id": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311-continue",
+      "run_id": "25712343-52b4-4b85-a786-e1dc9a15c9a2",
+      "task_queue": "handler-go-1-33-go-to-v-eaad455cd96d4a22af4c205d61ed2311",
+      "files": {
+        "1-33-go-to-v-next.json": "d67453e74a4b6109300ebd2782c16d35d48b2013bf9a124ab2c3bb1225093e36",
+        "1-33-go-to-v-next.bin": "5cf2f9ddbccd3f975bc9108b47c3849ad1a0e2ddf83f7919963cec7caa112e2e"
+      }
+    },
+    {
+      "name": "1-33-v-to-go-complete",
+      "workflow_id": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6-complete",
+      "run_id": "01a1b37c-8881-7a73-aeb5-1d8caabb388b",
+      "task_queue": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6",
+      "files": {
+        "1-33-v-to-go-complete.json": "495e709056e313b2d7c8b9116e0c0080042042e91420731e0d6a4ac0a84669c4",
+        "1-33-v-to-go-complete.bin": "ff158c4e371d76248929986ba0c0efdcc5121d5abe5d83cad01db634f4d1fdf8"
+      }
+    },
+    {
+      "name": "1-33-v-to-go-continue",
+      "workflow_id": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6-continue",
+      "run_id": "01a1b37c-88bc-7e0d-bfcc-150b35dc06fd",
+      "task_queue": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6",
+      "files": {
+        "1-33-v-to-go-continue.json": "ed6c3b503b25d9e2fcd0223ba67680dbf069d7ac05006a2e9cdd3e0ecdfab571",
+        "1-33-v-to-go-continue.bin": "2ce42be978d5bbf5407af734c4e137359ffa92222663dee55ee60c9671c4e0ca"
+      }
+    },
+    {
+      "name": "1-33-v-to-go-cancel",
+      "workflow_id": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6-cancel",
+      "run_id": "01a1b37c-88f8-7e9a-b442-d79ab85d91f4",
+      "task_queue": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6",
+      "files": {
+        "1-33-v-to-go-cancel.json": "8f268e8d7d0c507b1f51953544ab8521f312143330b3d65d6fb4164ab3f365d3",
+        "1-33-v-to-go-cancel.bin": "5c2179e7fe1fca89ca5157d2bf4d1633306595c3b8e035000d98a3bc9850e98d"
+      }
+    },
+    {
+      "name": "1-33-v-to-go-fail",
+      "workflow_id": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6-fail",
+      "run_id": "01a1b37c-8930-7c8e-b46d-bab7d59a74d7",
+      "task_queue": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6",
+      "files": {
+        "1-33-v-to-go-fail.json": "362b5bd273d5c218bed3a4b9ef496f9afd88f4220f2de990cc6f005f8f1a2243",
+        "1-33-v-to-go-fail.bin": "f6f753a4ce89e26c97c86db84b363e852bf6bc399b37732dd34289715619f86d"
+      }
+    },
+    {
+      "name": "1-33-v-to-go-next",
+      "workflow_id": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6-continue",
+      "run_id": "df17c28d-3272-4914-b2b2-03bf49955932",
+      "task_queue": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6",
+      "files": {
+        "1-33-v-to-go-next.json": "003175cc77f544e7009bd496b4cb84d13d91a7e8e550ea170de81bb92647e724",
+        "1-33-v-to-go-next.bin": "4a374d1eaa348ffe9a6623e9c10e7de1b282cc75174f4e750475f84e8111c053"
+      }
+    }
+  ]
+}

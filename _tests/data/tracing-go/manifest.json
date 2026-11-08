@@ -1,0 +1,147 @@
+{
+  "passed": true,
+  "reference": {
+    "sdk": "v1.35.0",
+    "opentelemetry_interceptor": "v0.6.0",
+    "opentelemetry": "v1.43.0",
+    "go_toolchain": "go version go1.26.1 darwin/arm64",
+    "sources": {
+      "main.go": "81ff7d27ef9072d789a8dfe979dd9ff01ffc87ebd8740da1862c7a73bd8eb96f",
+      "go.mod": "397f693ca9537e9bbd73053ffd436786d6ac02d3fb88a1db0adcdbb42747e76e",
+      "go.sum": "1d09e0236450b6a7ef14ef67d7e98437b29d9f3f52d814bc123f8f0680e275a3"
+    },
+    "binary_sha256": "1e62c7080c50914731386d0469c9bee1f2fa333f7ea40d67ab2d3c4d9b71e1f5"
+  },
+  "cases": [
+    {
+      "server": "1-32",
+      "direction": "go-to-v",
+      "handle": {
+        "workflow_id": "trace-go-1-32-go-to-v-c48bb17be6584b6ab7bb87aeb265ad5f-interop",
+        "run_id": "01a1b30e-2ee1-71d4-8773-dd9f5b2eee77"
+      },
+      "task_queue": "trace-go-1-32-go-to-v-c48bb17be6584b6ab7bb87aeb265ad5f",
+      "trace_id": "c12cd09de968403fa00134871986b27b",
+      "baggage": "tenant=interop",
+      "carriers": [
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-c12cd09de968403fa00134871986b27b-05f889126578e02c-01"
+        },
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-c12cd09de968403fa00134871986b27b-e1f8a4944850780b-01"
+        },
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-c12cd09de968403fa00134871986b27b-904250afc11b106c-03",
+          "tracestate": "vendor=value"
+        }
+      ],
+      "files": {
+        "1-32-go-to-v.json": "1623fe72aad5d804b60e5311b922ccc3461f847f69e8b2b380051f5399a2e31f",
+        "1-32-go-to-v.bin": "65ac1ea767b22cadcc9f8ecd2e13b8fdf5f25ed49ae14d5af298e310887d6cc5",
+        "1-32-go-to-v-go-spans.json": "6393ef63748f4ea89571d48f1476cff9ab65bdc8fac57d78a012c3b963230e28",
+        "1-32-go-to-v-v-spans.json": "2ea2aba84a9b1580c76d035ebb1ecea933339391cf6bfcccf8467e206277a89a"
+      }
+    },
+    {
+      "server": "1-32",
+      "direction": "v-to-go",
+      "handle": {
+        "workflow_id": "trace-go-1-32-v-to-go-9a94e102a49f465eb0a7336cea0ec286-interop",
+        "run_id": "01a1b30e-3554-7a50-b73a-7027317e2a25"
+      },
+      "task_queue": "trace-go-1-32-v-to-go-9a94e102a49f465eb0a7336cea0ec286",
+      "trace_id": "b77b6656429f453ea5550d41cd775433",
+      "baggage": "tenant=interop",
+      "carriers": [
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-b77b6656429f453ea5550d41cd775433-48562d62bceab925-03",
+          "tracestate": "vendor=value"
+        },
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-b77b6656429f453ea5550d41cd775433-cd453f4eaef55206-03",
+          "tracestate": "vendor=value"
+        },
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-b77b6656429f453ea5550d41cd775433-75f4d5e6fcfe223d-01"
+        }
+      ],
+      "files": {
+        "1-32-v-to-go.json": "5322913f0dad2da1fd50b311728235dec6d905f4b594062dc110164a179406d1",
+        "1-32-v-to-go.bin": "b421b857415ffc55a15dd3bb165d221ad0188e111c24a30782c612697bcf3bee",
+        "1-32-v-to-go-go-spans.json": "99b52d74896eb69660e6abdefe19543905707a4e9129785d8f373a9e1c717461",
+        "1-32-v-to-go-v-spans.json": "7b2d9e0eed368ae2e950da2d3c34f48e7d49e4d600da36a690a0a780f4ca54cb"
+      }
+    },
+    {
+      "server": "1-33",
+      "direction": "go-to-v",
+      "handle": {
+        "workflow_id": "trace-go-1-33-go-to-v-c93afb4e0b6146fb87ae7720e1644309-interop",
+        "run_id": "01a1b30e-3ada-7b90-b0d2-4a96218b4e2e"
+      },
+      "task_queue": "trace-go-1-33-go-to-v-c93afb4e0b6146fb87ae7720e1644309",
+      "trace_id": "41c50bd164f7450485697da288f2daba",
+      "baggage": "tenant=interop",
+      "carriers": [
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-41c50bd164f7450485697da288f2daba-81a90e4530d4a798-01"
+        },
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-41c50bd164f7450485697da288f2daba-42e0e82e5d1b42ce-01"
+        },
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-41c50bd164f7450485697da288f2daba-3b95050eaf384cf9-03",
+          "tracestate": "vendor=value"
+        }
+      ],
+      "files": {
+        "1-33-go-to-v.json": "1290990ffefbef8af793cfefb8580fc0713f17949312570b1337c8689927d442",
+        "1-33-go-to-v.bin": "e5642c16df2bec88b70c9f42aca542257fd1e603f019ae349ae8c2ce7811dc5a",
+        "1-33-go-to-v-go-spans.json": "f82c4275b38e9dc81c84b58ca7a20c248ee6c247255cf33f39664877bde2e96a",
+        "1-33-go-to-v-v-spans.json": "4a1b840ff8a5910e7bb2838c1beb2389c387db693c3fb73aae69708ba58ec818"
+      }
+    },
+    {
+      "server": "1-33",
+      "direction": "v-to-go",
+      "handle": {
+        "workflow_id": "trace-go-1-33-v-to-go-a96109f52bcb41f8aa041f60d4052d81-interop",
+        "run_id": "01a1b30e-3c41-7059-9494-c5b3d6604081"
+      },
+      "task_queue": "trace-go-1-33-v-to-go-a96109f52bcb41f8aa041f60d4052d81",
+      "trace_id": "cc1ded3a526645239a34a48799780210",
+      "baggage": "tenant=interop",
+      "carriers": [
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-cc1ded3a526645239a34a48799780210-c9f158f051c539f1-03",
+          "tracestate": "vendor=value"
+        },
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-cc1ded3a526645239a34a48799780210-d92dfc7c93b6a846-03",
+          "tracestate": "vendor=value"
+        },
+        {
+          "baggage": "tenant=interop",
+          "traceparent": "00-cc1ded3a526645239a34a48799780210-6af7f8528bad6103-01"
+        }
+      ],
+      "files": {
+        "1-33-v-to-go.json": "51ba3ab7505302074799d482e323072ea815ae77adf1fbd28a5ffa8b96533204",
+        "1-33-v-to-go.bin": "78d58533ed16086e70946941ef251b69fd9d2923f7b6366fa3b06c2c001523c4",
+        "1-33-v-to-go-go-spans.json": "87e4030df98476bae23da99c8cbc761fd322f1afd9fc9abe2deff3cf43fe5aa3",
+        "1-33-v-to-go-v-spans.json": "ff7c4b297df796c99972e853fbdb1af9018add07ed94ae1090ec1733b3481c52"
+      }
+    }
+  ]
+}

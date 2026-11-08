@@ -1,0 +1,186 @@
+[
+  {
+    "context": {
+      "trace_id": "41c50bd164f7450485697da288f2daba",
+      "span_id": "0b5ecb09c4c7a457",
+      "trace_flags": 3,
+      "trace_state": "vendor=value",
+      "remote": false
+    },
+    "parent_span_id": "abcdef1234567890",
+    "parent_remote": false,
+    "name": "QueryWorkflow",
+    "kind": "client",
+    "scope_name": "temporal-v",
+    "scope_version": "0.0.1",
+    "start_unix_nanos": 1794005416732783000,
+    "end_unix_nanos": 1794005416738969833,
+    "attributes": {
+      "rpc.grpc.status_code": 0,
+      "rpc.method": "QueryWorkflow",
+      "rpc.service": "temporal.api.workflowservice.v1.WorkflowService",
+      "rpc.system": "grpc",
+      "temporal.namespace": "default"
+    },
+    "events": [],
+    "links": [],
+    "dropped_attributes": 0,
+    "dropped_events": 0,
+    "dropped_links": 0,
+    "status": "unset",
+    "status_message": ""
+  },
+  {
+    "context": {
+      "trace_id": "41c50bd164f7450485697da288f2daba",
+      "span_id": "3b95050eaf384cf9",
+      "trace_flags": 3,
+      "trace_state": "vendor=value",
+      "remote": false
+    },
+    "parent_span_id": "abcdef1234567890",
+    "parent_remote": false,
+    "name": "SignalWorkflowExecution",
+    "kind": "client",
+    "scope_name": "temporal-v",
+    "scope_version": "0.0.1",
+    "start_unix_nanos": 1794005416750447000,
+    "end_unix_nanos": 1794005416752077333,
+    "attributes": {
+      "rpc.grpc.status_code": 0,
+      "rpc.method": "SignalWorkflowExecution",
+      "rpc.service": "temporal.api.workflowservice.v1.WorkflowService",
+      "rpc.system": "grpc",
+      "temporal.namespace": "default"
+    },
+    "events": [],
+    "links": [],
+    "dropped_attributes": 0,
+    "dropped_events": 0,
+    "dropped_links": 0,
+    "status": "unset",
+    "status_message": ""
+  },
+  {
+    "context": {
+      "trace_id": "41c50bd164f7450485697da288f2daba",
+      "span_id": "c7229617d77e1340",
+      "trace_flags": 3,
+      "trace_state": "vendor=value",
+      "remote": false
+    },
+    "parent_span_id": "3b95050eaf384cf9",
+    "parent_remote": true,
+    "name": "WorkflowEvent:signal_received",
+    "kind": "internal",
+    "scope_name": "temporal-v",
+    "scope_version": "0.0.1",
+    "start_unix_nanos": 1794005416752625000,
+    "end_unix_nanos": 1794005416752625000,
+    "attributes": {
+      "temporal.namespace": "default",
+      "temporal.workflow.id": "trace-go-1-33-go-to-v-c93afb4e0b6146fb87ae7720e1644309-interop",
+      "temporal.workflow.run_id": "01a1b30e-3ada-7b90-b0d2-4a96218b4e2e",
+      "temporal.workflow.type": "v.trace.interop"
+    },
+    "events": [],
+    "links": [],
+    "dropped_attributes": 0,
+    "dropped_events": 0,
+    "dropped_links": 0,
+    "status": "unset",
+    "status_message": ""
+  },
+  {
+    "context": {
+      "trace_id": "41c50bd164f7450485697da288f2daba",
+      "span_id": "f1392162722add15",
+      "trace_flags": 1,
+      "trace_state": "",
+      "remote": false
+    },
+    "parent_span_id": "81a90e4530d4a798",
+    "parent_remote": true,
+    "name": "RunWorkflow:v.trace.interop",
+    "kind": "server",
+    "scope_name": "temporal-v",
+    "scope_version": "0.0.1",
+    "start_unix_nanos": 1794005416708865000,
+    "end_unix_nanos": 1794005416752625000,
+    "attributes": {
+      "temporal.namespace": "default",
+      "temporal.workflow.id": "trace-go-1-33-go-to-v-c93afb4e0b6146fb87ae7720e1644309-interop",
+      "temporal.workflow.run_id": "01a1b30e-3ada-7b90-b0d2-4a96218b4e2e",
+      "temporal.workflow.type": "v.trace.interop"
+    },
+    "events": [],
+    "links": [],
+    "dropped_attributes": 0,
+    "dropped_events": 0,
+    "dropped_links": 0,
+    "status": "unset",
+    "status_message": ""
+  },
+  {
+    "context": {
+      "trace_id": "41c50bd164f7450485697da288f2daba",
+      "span_id": "7f4be59afd718753",
+      "trace_flags": 3,
+      "trace_state": "vendor=value",
+      "remote": false
+    },
+    "parent_span_id": "abcdef1234567890",
+    "parent_remote": false,
+    "name": "GetWorkflowExecutionHistory",
+    "kind": "client",
+    "scope_name": "temporal-v",
+    "scope_version": "0.0.1",
+    "start_unix_nanos": 1794005416763716000,
+    "end_unix_nanos": 1794005416766546458,
+    "attributes": {
+      "rpc.grpc.status_code": 0,
+      "rpc.method": "GetWorkflowExecutionHistory",
+      "rpc.service": "temporal.api.workflowservice.v1.WorkflowService",
+      "rpc.system": "grpc",
+      "temporal.namespace": "default"
+    },
+    "events": [],
+    "links": [],
+    "dropped_attributes": 0,
+    "dropped_events": 0,
+    "dropped_links": 0,
+    "status": "unset",
+    "status_message": ""
+  },
+  {
+    "context": {
+      "trace_id": "41c50bd164f7450485697da288f2daba",
+      "span_id": "dcb79d65117f4179",
+      "trace_flags": 3,
+      "trace_state": "vendor=value",
+      "remote": false
+    },
+    "parent_span_id": "abcdef1234567890",
+    "parent_remote": false,
+    "name": "GetWorkflowExecutionHistory",
+    "kind": "client",
+    "scope_name": "temporal-v",
+    "scope_version": "0.0.1",
+    "start_unix_nanos": 1794005416806479000,
+    "end_unix_nanos": 1794005416808095292,
+    "attributes": {
+      "rpc.grpc.status_code": 0,
+      "rpc.method": "GetWorkflowExecutionHistory",
+      "rpc.service": "temporal.api.workflowservice.v1.WorkflowService",
+      "rpc.system": "grpc",
+      "temporal.namespace": "default"
+    },
+    "events": [],
+    "links": [],
+    "dropped_attributes": 0,
+    "dropped_events": 0,
+    "dropped_links": 0,
+    "status": "unset",
+    "status_message": ""
+  }
+]

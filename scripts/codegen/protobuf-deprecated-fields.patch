@@ -1,0 +1,16 @@
+--- a/gen/codegen.v
++++ b/gen/codegen.v
+@@ -695,9 +695,10 @@
+ 				t = '?${t}'
+ 			}
+ 		}
+-		// [deprecated = true] → V's field attribute (warns cross-module)
+-		attr := if fld.deprecated { ' @[deprecated]' } else { '' }
+-		b.writeln('\t${sanitize(fld.name)} ${t}${attr}')
++		// Preserve deprecated wire fields without making the generated encoder
++		// and decoder fail V production builds when they access those fields.
++		deprecation := if fld.deprecated { ' // Deprecated by the protobuf schema.' } else { '' }
++		b.writeln('\t${sanitize(fld.name)} ${t}${deprecation}')
+ 	}
+ 	b.writeln('\tpb_unknown []u8 // unrecognized fields, re-emitted on encode')
+ 	b.writeln('}')

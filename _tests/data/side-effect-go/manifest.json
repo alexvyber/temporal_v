@@ -1,0 +1,60 @@
+{
+  "passed": true,
+  "histories": 2,
+  "cases": [
+    "1-32: Go SDK binary SideEffect and protobuf-JSON MutableSideEffect wrappers/unchanged call counters replayed by V; Go-to-V replacement preserved queries/results without invoking V callbacks; both Go and V replayed completed history offline",
+    "1-33: Go SDK binary SideEffect and protobuf-JSON MutableSideEffect wrappers/unchanged call counters replayed by V; Go-to-V replacement preserved queries/results without invoking V callbacks; both Go and V replayed completed history offline"
+  ],
+  "oracle": {
+    "sdk": "v1.35.0",
+    "files": {
+      "go.mod": "b49e40898631ec88a35646829bec0ac8358432cc994dc71bb71f470baf9e648c",
+      "go.sum": "0b45c655753a043a6e330c9bb0268fc951a85067a5db34d28bc7209993b4ab94",
+      "main.go": "c07a819bfb7cc6c6923417b87b37c18c0c0e8fed4d9b0e7366dad917327a88bc"
+    }
+  },
+  "records": [
+    {
+      "version": "1-32",
+      "handle": {
+        "workflow_id": "side-effect-go-1-32-7337549a8b1742ecae9627d18228bf00-go",
+        "run_id": "01a1b278-8acc-7386-9549-ee8f1d356a49"
+      },
+      "task_queue": "side-effect-go-1-32-7337549a8b1742ecae9627d18228bf00",
+      "state": {
+        "tokens": [
+          "742e7367b4470154000ab0db2c0e2df1279b190597e2ce8152fa3a66612966ad",
+          "42b0d5ce230239a4ff31998b95a7b5a24bb1dc854a465b3f5711f5a13d3721af",
+          "d5c18e6064dbb396a6a17f24fc39d5d08ea80f3b2d52ef3153ced5d1b8b76b31"
+        ],
+        "configuration": "two",
+        "phase": 2
+      },
+      "files": {
+        "1-32.json": "b78e56d43097604dfbaf3cda4fa916227c52213db65015dce911f91e7cccab53",
+        "1-32.bin": "cd27e0996528f8ee4ef28046eef61461e7067ec40225390399f52e49848b4f64"
+      }
+    },
+    {
+      "version": "1-33",
+      "handle": {
+        "workflow_id": "side-effect-go-1-33-d9a26f484bc746e0a827ebe7332ce7df-go",
+        "run_id": "01a1b278-9169-7aaa-ad17-4c8a43453921"
+      },
+      "task_queue": "side-effect-go-1-33-d9a26f484bc746e0a827ebe7332ce7df",
+      "state": {
+        "tokens": [
+          "2adfb9d412ed14256388f6ec0898915f170dbaae138a6455e2505d6ed287380f",
+          "e20350aef308bdbc8e1fc5e09cf944718f06fae5c91a1b2deb2c955e0d7b749c",
+          "ef77bbd2e80e4ad44b648598bc6fa2e38faed49612a3b26cc00cc8828d6632f7"
+        ],
+        "configuration": "two",
+        "phase": 2
+      },
+      "files": {
+        "1-33.json": "c3e654e66fd64700854f8ba46bd68092a46fc164e9ae866769855fa3b29a4cea",
+        "1-33.bin": "b43e9a1f0b5f363785a812bdc376bf3d36ae053ed800e76bd57baaa9417c8f0d"
+      }
+    }
+  ]
+}

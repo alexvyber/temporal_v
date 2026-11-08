@@ -1,0 +1,44 @@
+[
+  {
+    "name": "StartWorkflow:v.trace.interop",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "81a90e4530d4a798",
+    "trace_id": "41c50bd164f7450485697da288f2daba"
+  },
+  {
+    "name": "SignalWorkflow:ready",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "42e0e82e5d1b42ce",
+    "trace_id": "41c50bd164f7450485697da288f2daba"
+  },
+  {
+    "name": "HandleSignal:ready",
+    "parent_span_id": "42e0e82e5d1b42ce",
+    "span_id": "6eb9b0ab730fa36a",
+    "trace_id": "41c50bd164f7450485697da288f2daba"
+  },
+  {
+    "name": "HandleSignal:ready",
+    "parent_span_id": "42e0e82e5d1b42ce",
+    "span_id": "f860f19b0ea0fa29",
+    "trace_id": "41c50bd164f7450485697da288f2daba"
+  },
+  {
+    "name": "HandleQuery:state",
+    "parent_span_id": "a8aae8ca1ea6164f",
+    "span_id": "8391b5416d1f6b9d",
+    "trace_id": "41c50bd164f7450485697da288f2daba"
+  },
+  {
+    "name": "HandleQuery:state",
+    "parent_span_id": "a8aae8ca1ea6164f",
+    "span_id": "6f336fae3c444dd2",
+    "trace_id": "41c50bd164f7450485697da288f2daba"
+  },
+  {
+    "name": "QueryWorkflow:state",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "a8aae8ca1ea6164f",
+    "trace_id": "41c50bd164f7450485697da288f2daba"
+  }
+]

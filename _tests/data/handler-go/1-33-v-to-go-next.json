@@ -1,0 +1,131 @@
+{
+  "events": [
+    {
+      "eventId": "1",
+      "eventTime": "2026-11-07T00:50:45.866132Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED",
+      "taskId": "1048748",
+      "workflowExecutionStartedEventAttributes": {
+        "workflowType": {
+          "name": "v.update-lifecycle"
+        },
+        "taskQueue": {
+          "name": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "input": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "Im5leHQi"
+            }
+          ]
+        },
+        "workflowExecutionTimeout": "60s",
+        "workflowRunTimeout": "60s",
+        "workflowTaskTimeout": "10s",
+        "continuedExecutionRunId": "01a1b37c-88bc-7e0d-bfcc-150b35dc06fd",
+        "initiator": "CONTINUE_AS_NEW_INITIATOR_WORKFLOW",
+        "originalExecutionRunId": "df17c28d-3272-4914-b2b2-03bf49955932",
+        "firstExecutionRunId": "01a1b37c-88bc-7e0d-bfcc-150b35dc06fd",
+        "attempt": 1,
+        "workflowExecutionExpirationTime": "2026-11-07T00:51:45.565Z",
+        "firstWorkflowTaskBackoff": "0.698715s",
+        "prevAutoResetPoints": {
+          "points": [
+            {
+              "buildId": "temporal-v-dev",
+              "runId": "01a1b37c-88bc-7e0d-bfcc-150b35dc06fd",
+              "firstWorkflowTaskCompletedId": "4",
+              "createTime": "2026-11-07T00:50:45.568018Z",
+              "expireTime": "2026-11-08T00:50:45.866132Z",
+              "resettable": true
+            },
+            {
+              "buildId": "c9ad1df09f1cfd95fd7214e7f9573dc8",
+              "runId": "01a1b37c-88bc-7e0d-bfcc-150b35dc06fd",
+              "firstWorkflowTaskCompletedId": "16",
+              "createTime": "2026-11-07T00:50:45.865907Z",
+              "expireTime": "2026-11-08T00:50:45.866132Z",
+              "resettable": true
+            }
+          ]
+        },
+        "header": {},
+        "workflowId": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6-continue"
+      }
+    },
+    {
+      "eventId": "2",
+      "eventTime": "2026-11-07T00:50:46.868187Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "taskId": "1048784",
+      "workflowTaskScheduledEventAttributes": {
+        "taskQueue": {
+          "name": "handler-go-1-33-v-to-go-647684ec50a14cc3b563a8c0e6ff6db6",
+          "kind": "TASK_QUEUE_KIND_NORMAL"
+        },
+        "startToCloseTimeout": "10s",
+        "attempt": 1
+      }
+    },
+    {
+      "eventId": "3",
+      "eventTime": "2026-11-07T00:50:46.869288Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "taskId": "1048787",
+      "workflowTaskStartedEventAttributes": {
+        "scheduledEventId": "2",
+        "identity": "43214@Alexeys-MacBook-Pro.local@",
+        "requestId": "bce66d9d-df12-4dd4-a44b-f5d024111c16",
+        "historySizeBytes": "667",
+        "workerVersion": {
+          "buildId": "c9ad1df09f1cfd95fd7214e7f9573dc8"
+        }
+      }
+    },
+    {
+      "eventId": "4",
+      "eventTime": "2026-11-07T00:50:46.870543Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "taskId": "1048791",
+      "workflowTaskCompletedEventAttributes": {
+        "scheduledEventId": "2",
+        "startedEventId": "3",
+        "identity": "43214@Alexeys-MacBook-Pro.local@",
+        "workerVersion": {
+          "buildId": "c9ad1df09f1cfd95fd7214e7f9573dc8"
+        },
+        "sdkMetadata": {
+          "langUsedFlags": [
+            3
+          ],
+          "sdkName": "temporal-go",
+          "sdkVersion": "1.35.0"
+        },
+        "meteringMetadata": {}
+      }
+    },
+    {
+      "eventId": "5",
+      "eventTime": "2026-11-07T00:50:46.870566Z",
+      "eventType": "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED",
+      "taskId": "1048792",
+      "workflowExecutionCompletedEventAttributes": {
+        "result": {
+          "payloads": [
+            {
+              "metadata": {
+                "encoding": "anNvbi9wbGFpbg=="
+              },
+              "data": "ImNvbnRpbnVlZCI="
+            }
+          ]
+        },
+        "workflowTaskCompletedEventId": "4"
+      }
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "name": "HandleQuery:state",
+    "parent_span_id": "4fe4f71b32afd0ea",
+    "span_id": "6738b2f11996ee19",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  },
+  {
+    "name": "HandleQuery:state",
+    "parent_span_id": "4fe4f71b32afd0ea",
+    "span_id": "c2152f3eca263406",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  },
+  {
+    "name": "RunWorkflow:v.trace.interop",
+    "parent_span_id": "c9f158f051c539f1",
+    "span_id": "c6ded5dc73e58a98",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  },
+  {
+    "name": "RunWorkflow:v.trace.interop",
+    "parent_span_id": "c9f158f051c539f1",
+    "span_id": "e71ebf397e87c082",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  },
+  {
+    "name": "QueryWorkflow:state",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "4fe4f71b32afd0ea",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  },
+  {
+    "name": "SignalWorkflow:finish",
+    "parent_span_id": "abcdef1234567890",
+    "span_id": "6af7f8528bad6103",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  },
+  {
+    "name": "HandleSignal:finish",
+    "parent_span_id": "6af7f8528bad6103",
+    "span_id": "57c17624fd67a3bd",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  },
+  {
+    "name": "HandleSignal:finish",
+    "parent_span_id": "6af7f8528bad6103",
+    "span_id": "f7d4799cb29e0cfd",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  },
+  {
+    "name": "RunWorkflow:v.trace.interop",
+    "parent_span_id": "c9f158f051c539f1",
+    "span_id": "bad34ff3c498125f",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  },
+  {
+    "name": "RunWorkflow:v.trace.interop",
+    "parent_span_id": "c9f158f051c539f1",
+    "span_id": "8f9783cd4e80b259",
+    "trace_id": "cc1ded3a526645239a34a48799780210"
+  }
+]
