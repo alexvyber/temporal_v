@@ -1,0 +1,568 @@
+{
+  "schema_version": 1,
+  "release_ready": false,
+  "scope": "Full Temporal SDK feature parity",
+  "reference": {
+    "repository": "https://github.com/temporalio/sdk-rust",
+    "revision": "67174ea96e8a06bc33137036e73cfaf508aa9dd7"
+  },
+  "targets": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "requirements": [
+    {
+      "id": "workflow-execution",
+      "status": "partial",
+      "detail": "Dynamic workflow factories with named-handler priority, event-driven state, recorded time/RNG, nested/shielded cancellation scopes, interceptors, metadata and retryable workflow-task failures implemented; execution ergonomics and broader lifecycle coverage remain. Global/per-type nondeterminism failure policies tested with incompatible code, execution isolation and repaired replay. Shared client workers and eager workflow starts implemented, with actual eager-response, fallback, client-close lifetime and replacement replay coverage. now() preserves exact recorded nanoseconds; millisecond info/log fields derive from that clock, with live history and restart/replay coverage. Per-run runtimes now isolate mutable state, with bounded concurrent activation tasks and same-run serialization through completion/storage/eviction. A focused two-server three-codec 90-history matrix passed blocked-callback progress, bounds, ordering, failure/cancellation, replacement and offline replay; a sticky 72-history visibility/storage matrix also passed. The same 90 histories passed V/C ASan/UBSan, including shutdown while a callback remained held. Aggregate integration remains pending. is_replaying() is exposed for nondurable diagnostics. Workflow factories/events/commands and Update handler panics now fail their task or honor the configurable fail-workflow policy. Query/validator/Activity/Nexus callback panics are isolated. Native faults, unreturning callbacks, other extension callback boundaries remain. Focused normal and V/C ASan/UBSan matrices passed 96 workflow/Activity and 12 Nexus histories with cleanup, repair, replacement and replay. Aggregate 102-report and Linux validation remain pending. Client workflow pause/unpause passed 48 focused histories including namespace gating, retained signal/cancellation, unrelated progress, replacement and offline replay with three codecs. Instrumented/aggregate/current Linux validation remains. The same 48 pause/unpause histories passed V/C ASan/UBSan. Original native panic stacks are captured before unwinding through a pinned V runtime extension. Normal, optimized and V/C sanitizer matrices each passed 96 workflow/Activity, 44 converter/storage and 12 Nexus histories. Runtime/hash/failed-rebuild guards and packaged-consumer verification passed. Aggregate and Linux verification of the extension remain. Explicit forced workflow-task failure passed 84 histories each in normal, optimized and V/C sanitizer matrices, with first-request precedence over subsequent errors, panic and queued completion, replacement and replay. Its aggregate and Linux verification remain. Named deterministic random streams and default float/bool APIs passed 384 fixed Python values and shared-handle/isolation/UUID/float checks in normal, optimized and sanitizer builds. Each live build passed 24 codec/storage/reset/restart/offline histories, including reseeding old handles. Aggregate and Linux validation remain.",
+      "local_evidence": [
+        "primitives-results.json",
+        "scopes-results.json",
+        "interceptors-results.json",
+        "task-failure-results.json",
+        "dynamic-results.json",
+        "nondeterminism-results.json",
+        "eager-workflow-results.json",
+        "clock-results.json",
+        "concurrency-results.json",
+        "workflow-pause-results.json",
+        "panic-results.json",
+        "panic-nexus-results.json",
+        "random-stream-results.json"
+      ]
+    },
+    {
+      "id": "timers",
+      "status": "implemented",
+      "detail": "Duration timers and idempotent cancellation tested against Temporal, restart replay and offline replay; Linux release verification remains.",
+      "local_evidence": [
+        "primitives-results.json",
+        "replay-results.json"
+      ]
+    },
+    {
+      "id": "remote-activities",
+      "status": "partial",
+      "detail": "Dynamic handlers with named-registration priority, unlimited default retries, timeouts, typed cancellation including pause/reset, multi-value heartbeat progress retained through sleep and retry, async/eager execution, custom IDs, priority/versioning intent, summaries and scheduling information implemented. Broader option/failure coverage remains.",
+      "local_evidence": [
+        "activities-results.json",
+        "async-activity-results.json",
+        "combined-results.json",
+        "activity-metadata-results.json",
+        "activity-management-results.json",
+        "heartbeat-results.json",
+        "dynamic-results.json"
+      ]
+    },
+    {
+      "id": "local-activities",
+      "status": "partial",
+      "detail": "Dynamic local handlers, local retries, durable backoff, cancellation, custom IDs, summaries and scheduling information implemented. Timer-backed attempts use fresh Core sequences with stable application handles; completed retries survive restart/offline replay. Broader timeout/overload coverage remains.",
+      "local_evidence": [
+        "activities-results.json",
+        "replay-results.json",
+        "activity-metadata-results.json",
+        "dynamic-results.json"
+      ]
+    },
+    {
+      "id": "signals-queries",
+      "status": "partial",
+      "detail": "Signals, readonly queries, external signal/cancel and query interceptors implemented; reserved workflow metadata query with sorted handler definitions/descriptions and headers included. Broader handler lifecycle coverage remains. Structured query failures decode protected attributes while retaining RPC diagnostics. Signal identity and originating history event IDs reach handlers and replay. Atomic signal-with-start with deduplication and typed query rejection policies implemented and tested through restart/replay. Client identities use OS-random UUIDv4 after reproducing a cross-process collision in time-seeded IDs; concurrent and separate-process deduplication regression tests added.",
+      "local_evidence": [
+        "client-results.json",
+        "primitives-results.json",
+        "interceptors-results.json",
+        "context-results.json",
+        "lifecycle-results.json",
+        "client-interactions-results.json",
+        "identity-results.json"
+      ]
+    },
+    {
+      "id": "updates",
+      "status": "partial",
+      "detail": "Validation, deferred completion/replay, deduplication, Update-with-start, timeout identity, headers and validation/event interceptors implemented; broader lifecycle/race coverage remains. Request/callback/link metadata and independent propagated result scopes implemented, including detached polling and scope-preserving deduplication. Per-handler unfinished policies, pending handler/ID snapshots, all-handlers-finished checks and completion/CAN/cancel/failure abandonment now match pinned Go semantics. Normal, optimized and V/C sanitizer matrices passed 28 restart/replay histories. Go SDK 1.35/V live handoffs passed sixteen runs plus four continuations, and both SDKs replayed all twenty; frozen histories also passed optimized/instrumented V replay. Instrumented existing panic/extension regressions passed 96/44 histories. Full 105-report and current Linux validation remain pending.",
+      "local_evidence": [
+        "orchestration-results.json",
+        "service-results.json",
+        "interceptors-results.json",
+        "update-context-results.json",
+        "handler-lifecycle-results.json",
+        "handler-go-results.json"
+      ]
+    },
+    {
+      "id": "child-workflows",
+      "status": "partial",
+      "detail": "Configurable policies/timeouts/retries/metadata, duplicate IDs, cancel-before-start and running cancellation tested; cross-namespace codec and failure propagation tested; advanced versioning and broader race coverage remain.",
+      "local_evidence": [
+        "children-results.json",
+        "context-results.json"
+      ]
+    },
+    {
+      "id": "run-chains",
+      "status": "partial",
+      "detail": "Continuation, retry-chain results and timeout inheritance tested; broader cron/options/versioning inheritance coverage remains.",
+      "local_evidence": [
+        "children-results.json",
+        "orchestration-results.json"
+      ]
+    },
+    {
+      "id": "versioning",
+      "status": "partial",
+      "detail": "Patching/deprecation cross-code replay, per-workflow pinned/auto behavior and worker defaults, deployment routing and activation deployment/SDK metadata implemented. Mixed types tested through deployment changes, restart and offline replay. Legacy compatibility, ramps, overrides and SDK release matrix remain. Typed SDK overrides and guarded current/ramping controls are implemented. Focused tests on both 1.32/1.33 servers verified 0/100 ramps, stale tokens, unknown targets, pinned/auto/one-time/clear operations preserving priority, cross-version children, continue-as-new pin inheritance, SIGKILL/replacement and offline replay. Full aggregate/instrumented integration of this candidate is pending; legacy compatibility and the SDK release matrix remain. The deployment candidate passed all 61 host reports including instrumented integration. Typed legacy compatibility/reachability APIs and a tenth Core patch excluding legacy workers from eager reservations are implemented; two-server aggregate and instrumented legacy validation are pending. Focused legacy tests passed against both embedded servers for all compatibility operations, reachability, pre-RPC validation, SIGKILL/replacement, default-C eager fallback and offline replay after server shutdown. Full aggregate/instrumented legacy verification remains pending. The corrected legacy candidate passed all 62 host reports including instrumented integration at source 3bffa26694c33918cc526ab2c7c976972031b669f670f54cb261463b62197cd5. Numeric per-run version choices, supported ranges/default -1, zero, retained nondeterminism errors and final-version deprecation now use Core patch markers. Normal and optimized two-server/three-codec/storage matrices passed 60 histories and 72 incompatible rejections each, including repair, stable RNG and safe removal. Previous SideEffect regressions passed 144 histories/672 markers plus eight changed-code and two actual Go histories. Expanded instrumentation, integrated 106-report and Linux validation remain pending. The final V/C instrumented matrix also passed all 60 histories/72 rejections; transient repair-query errors were recorded and bounded polling retried them while checking worker liveness. An independent wire audit verified external references versus inline payloads across at least 180 completed histories. Aggregate/current Linux validation remain outstanding.",
+      "local_evidence": [
+        "patch-results.json",
+        "worker-options-results.json",
+        "workflow-versioning-results.json",
+        "deployment-results.json",
+        "legacy-versioning-results.json",
+        "numeric-version-results.json"
+      ]
+    },
+    {
+      "id": "payloads-failures",
+      "status": "partial",
+      "detail": "Converters/codecs, per-value JSON/binary/protobuf/null arguments and typed workflow/Activity/query/Update outputs are implemented, with owned codec-decoded raw views. Concrete protobuf binary and JSON converters validate generated types; binary retains unknown wire fields, JSON omits them and rejects unknown JSON fields. JSON parsing preserves exact numeric tokens and checks duplicate keys/aliases, UTF-8 and well-known types. Focused normal/instrumented JSON tests passed eight dependency files, 592 Go-derived cases and 16 two-server codec/named restart/offline histories, plus explicit JSON under custom converters. Earlier mixed-value/callback instrumented matrices passed 80 histories. Nested protected failures, result contexts and external storage remain covered. Full new aggregate/platform validation and broader interoperability/typed failure details remain. The prior typed-callback candidate passed all 67 host reports at source 601740a9b15efee09edb039b62ee4d9a5f011ace0adfefba66194a8ee4b8a608; current JSON aggregate/platform validation is pending. All 68 host reports passed at source 480c6372298db1e43b7b054df9c3f0163456da3d804cb840b8859930d3ecd7e4. The next candidate uses typed converter input/output, preserving failure semantic details across contexts, custom opaque formats and exact same-scope rethrow. Focused normal two-server/seven-profile wire matrices passed 112 failure/checkpoint/deferred/cancellation histories and 98 Nexus histories plus 49 standalone operations. Full aggregate/instrumented/platform validation remains. Final normal and V/C Address/UB sanitizer matrices passed all 210 new histories and 49 standalone Nexus operations; aggregate and platform validation of the typed-converter candidate remain pending. The next isolated candidate supports count-changing argument codecs, checked singular conversion and stricter protobuf JSON interoperability. Normal and V/C Address/UB sanitizer count-changing matrices passed 210 histories and 49 standalone operations; the protobuf matrix passed 13,682 Go-derived JSON/wire cases and 16 restart/offline histories. All eight dependency tests and exact cumulative patch reconstruction passed. Aggregate and platform validation remain pending. The prior typed-converter candidate passed all 70 host reports at source da51617156a6418e1f0e8a92f4c87e8aea92dc47fce24446434e7d6a1756f183; the combined codec/protobuf aggregate remains pending. All 71 host reports passed at source 6de0817dd248ac4fd2b2352598a57d0cb8d41896d76bace6f9063e6ef15681da. The next candidate adds typed metadata maps, owned raw construction/snapshots and cancellation error details; normal/instrumented focused matrices passed 28 metadata and 84 cancellation histories plus 14 standalone Nexus cancellations. Aggregate and platform validation remain pending. SDK73 aggregate failed JSON validation of typed Activity headers containing _type; SDK74 uses the hardened bounded JSON parser, with focused malformed/UTF-8/type-field/numeric regression tests passed. Full corrected aggregate/platform validation remains pending. External reference claim JSON now permits ordinary _type keys and rejects duplicate keys/malformed nested arrays; normal and instrumented regression units passed.",
+      "local_evidence": [
+        "converter-results.json",
+        "arguments-results.json",
+        "failure-chain-results.json",
+        "codec-failure-results.json",
+        "context-results.json",
+        "result-context-results.json",
+        "protobuf-results.json",
+        "mixed-values-results.json",
+        "typed-callbacks-results.json",
+        "protobuf-json-results.json",
+        "typed-details-results.json",
+        "typed-nexus-results.json",
+        "codec-counts-results.json",
+        "typed-metadata-results.json",
+        "cancellation-details-results.json"
+      ]
+    },
+    {
+      "id": "client",
+      "status": "partial",
+      "detail": "All 218 pinned unary RPCs generated; high-level workflow/Update/history/async completion, interception/metadata/retries, rich status details and client/per-call cancellation implemented. Broader live service/option coverage remains. Workflow termination supports scoped details and execution-chain guards; close results retain cancellation/termination details and failure/timeout retry state. Atomic signal-with-start with deduplication and typed query rejection policies implemented and tested through restart/replay. Raw protobuf/JSON history batches, terminal-event selection, wire-preserving paginated exports and overall wait-budget errors are implemented. Focused normal raw-history and normal/instrumented 480-wait matrices passed, including late description errors and explicit caller cancellation; full combined/platform verification remains pending. Workflow listing/counting and lazy current/archived/scan page iteration now preserve wire execution info and decode each memo using its own workflow scope. Focused normal and instrumented two-server tests passed 72 histories including storage, replacement and offline replay; archive/scan routing was injected rather than tested against a configured archival backend. Full aggregate/current Linux validation remains. High-level typed/raw workflow description, reset and run-specific asynchronous deletion passed 90 focused histories across two servers, three codecs and storage on/off, with replacement and offline replay without uploads. Reset automatic retries are disabled because the tested 1.32 server does not deduplicate reset IDs; 1.33 does. Both tested servers reject the schema post-reset signal operation. Instrumented and aggregate/current Linux validation remain. The same 90 workflow-management histories passed focused V/C ASan/UBSan.",
+      "local_evidence": [
+        "service-results.json",
+        "interceptors-results.json",
+        "lifecycle-results.json",
+        "client-interactions-results.json",
+        "visibility-results.json",
+        "workflow-management-results.json"
+      ]
+    },
+    {
+      "id": "standalone-activities",
+      "status": "partial",
+      "detail": "High-level start/result/describe, cancellation/termination, pause/unpause/reset and deferred completion by token or execution ID implemented, including target conversion and worker-loss heartbeat retry. Propagated Nexus result contexts and checkpoint retry tested; eager starts and broader management option coverage remain. Standalone eager reservation/dispatch and fallback are implemented in an eighth Core patch; focused live tests passed for accepted inline tasks, slot exhaustion, failed-start cleanup, old-server/throttling/shutdown fallback and heartbeat recovery after SIGKILL. Inline acceptance needs the supporting 1.33 server and activity.enableEagerStart=true; aggregate verification is pending. Deployment-versioned/rate-limited workers conservatively fall back to polling.",
+      "local_evidence": [
+        "service-results.json",
+        "smoke-results.json",
+        "standalone-results.json",
+        "eager-standalone-results.json"
+      ]
+    },
+    {
+      "id": "nexus",
+      "status": "partial",
+      "detail": "Workflow scheduling, sync/async handlers, standalone client start/result/describe/cancel/terminate and durable callbacks implemented. Protected failures, use-existing stored target, exact statuses and completion after worker loss tested. Propagated result contexts, cross-namespace and broader edge coverage remain. Activity-backed operations with durable callbacks, propagated result scope and exact-run cancellation implemented; one async start per handler invocation. Update-backed callbacks, synchronous workflow queries and retry-deduplicated workflow signals implemented; protected failure scopes and restart replay tested. Captured Activity/timeout/child roots are normalized to application operation failures while retaining typed causes. Incompatible custom converter roots are rejected before Core submission. Focused normal 90-history two-server codec/restart/offline matrix passed; full corrected aggregate/instrumented/platform validation remains pending.",
+      "local_evidence": [
+        "nexus-results.json",
+        "service-results.json",
+        "nexus-client-results.json",
+        "nexus-activity-results.json",
+        "nexus-update-results.json",
+        "nexus-interactions-results.json",
+        "nexus-failure-results.json"
+      ]
+    },
+    {
+      "id": "transport-security",
+      "status": "partial",
+      "detail": "TLS/mTLS, API keys, metadata refresh, keep-alive and authenticated CONNECT implemented. TLS hostname/client certificates and proxy credential rejection/reconnect tested; external authorization and broader transport coverage remain. Configurable unary retry/backoff, gzip, DNS resolution, SDK headers and warning thresholds are implemented with wire-level and real-server tests; the bridge now enforces overall RPC deadlines across retries. Multiple-address DNS redistribution remains unverified. A V custom gRPC transport with bounded native queues, separated dispatch pools, cancellation forwarding and owned callback lifetime is implemented; focused live validation passed for concurrent forwarding, metadata/status details, count/byte overload, cancellation/deadlines, failed construction cleanup, shared-worker client-close lifetime, SIGKILL/replacement and offline replay; all 58 host reports, including instrumented integration, passed for the custom-transport candidate; current Linux evidence remains outstanding. Core-backed TOML/environment profile loading, normalized metadata, TLS source resolution, URL inference and redacted diagnostics are implemented and focused-tested through real TLS/mTLS, restart and replay. Unsupported hostname-verification bypass is retained and explicitly rejected. Default local port is 7233. Per-call RPC metadata now uses ordered raw-byte entries, preserving repeated ASCII/binary values, empty binary values, connection-default precedence and comma-coalesced forwarding. An eleventh Core patch preserves request/response values and retry cloning. Focused normal/instrumented callback and real-server transport tests passed, plus all 215 Rust client/bridge units. Combined/platform verification remains pending.",
+      "local_evidence": [
+        "tls-results.json",
+        "service-results.json",
+        "outage-results.json",
+        "transport-results.json",
+        "profiles-results.json",
+        "grpc-transport-results.json",
+        "metadata-transport-results.json"
+      ]
+    },
+    {
+      "id": "observability",
+      "status": "partial",
+      "detail": "Structured SDK/Core logs, replay-aware workflow logs, Prometheus/OTLP HTTP/gRPC metrics, scoped user instruments, custom bounded metric export and interceptors are implemented. Typed spans/events/links/status, bounded concurrent custom tracing with flush/deadline/shutdown and native OTLP gRPC/HTTP protobuf/HTTP JSON with custom CA/mTLS are implemented. W3C context and baggage matched 14,896 and 11,935 pinned Go OpenTelemetry vectors. Client RPCs and retained connection scopes passed concurrent-close tests. Workflow/Activity/query/validator/Nexus spans and baggage passed 194 histories normally and under V/C ASan/UBSan across both servers, three codecs and forced offloading, including scope overrides, child/Continue-as-New, failures/cancellation, callbacks, replacement and replay suppression. Actual Go SDK 1.35.0 with official OpenTelemetry interceptor 0.6.0/OpenTelemetry 1.43.0 passed four Go-to-V/V-to-Go handoffs, normal and instrumented V paths, independent frozen wire/ancestry checks and both SDK replayers. The SDK92 host gate failed a shared OTLP metrics default-client/protocol regression; exact failed evidence is archived. Corrected feature selection and explicit metric protobuf passed all 21 bridge units plus real metrics/options and trace transport/TLS tests. The combined 97-report candidate still needs aggregate/current Linux validation. Wider sampler/exporter coverage and production observability validation remain. Sampling now supports always-on/off, exact ratio, configurable parent-based and custom policies with baggage, attributes, tracestate and distinct recording/export decisions. The pinned Go 1.43 oracle matched 19,020 decisions. Normal and V/C ASan/UBSan two-server matrices passed 198 workflow and 56 Nexus histories each, including forced payload storage, SIGKILL/replacement and offline replay. Existing 108-history automatic tracing and four actual Go interoperability replays passed with the default sampler. Integrated 100-report and Linux validation remain pending.",
+      "local_evidence": [
+        "observability-results.json",
+        "interceptors-results.json",
+        "combined-results.json",
+        "metrics-options-results.json",
+        "user-metrics-results.json",
+        "user-metrics-sanitized-results.json",
+        "metric-export-results.json",
+        "trace-context-results.json",
+        "tracing-transport-results.json",
+        "tracing-typed-results.json",
+        "tracing-tls-results.json",
+        "tracing-provider-results.json",
+        "tracing-client-results.json",
+        "tracing-workflow-results.json",
+        "tracing-nexus-results.json",
+        "baggage-results.json",
+        "baggage-e2e-results.json",
+        "tracing-go-results.json",
+        "sampling-results.json",
+        "sampling-e2e-results.json",
+        "sampling-nexus-results.json"
+      ]
+    },
+    {
+      "id": "worker-configuration",
+      "status": "partial",
+      "detail": "Fixed/resource suppliers, custom asynchronous V suppliers for all four task kinds, context/permit lifecycle, dynamic capacity, separate handler limits, polling/cache/shutdown/throttles, deployment routing, combined workers and poller autoscaling implemented. Broader overload and provider edge coverage remain. Combined workers can now poll registered Nexus handlers alongside workflows and local/remote Activities on one Core worker. Runtime heartbeat interval, native runtime descriptors, environment suppression and the payload-error-limit switch are exposed. Runtime/metric leases now drain before slot dispatcher cleanup. Shared Core borrows remove a query/constructor deadlock; an observed blocking query failed with the serialized V policy and passed with the shared policy.",
+      "local_evidence": [
+        "worker-options-results.json",
+        "combined-results.json",
+        "tuner-results.json"
+      ]
+    },
+    {
+      "id": "testing-replay",
+      "status": "partial",
+      "detail": "Offline replay/nondeterminism diagnostics, old-workflow patch corpus, managed dev/time-skipping server, concurrent time skipping and programmatic shutdown tested. SDK release-to-release corpus remains. An isolated host prototype passed actual archived SDK57/Core6 to current/Core10 and reverse workflow-worker replacement with/without codecs; all 16 histories replayed with both SDKs. Portable maintained candidate/published release matrices remain. Host upgrade/rollback of both workflow and Activity workers passed between SDK57/Core6 and candidate64/Core10 with codecs on/off; 16 histories replayed with both SDKs. Exact source/library/tool/history hashes were archived; portable/published-release coverage remains. Portable SDK50-to-SDK68 and rollback passed both Linux architectures with both worker kinds, codecs on/off: 32 histories and 64 offline replays. These are internal snapshots, not published releases. Raw-history client matrices passed 24 pending/completed histories with/without external storage; full integration remains pending. All 76 host reports passed at source f4504f079522d92af8ca4f5e139ad3b525d45aa1734f3edc66641fd6ac0a0135, including raw-history/deadline and native sanitizer matrices. The metadata candidate requires a new full gate. Bounded corpus replay now returns input-ordered outcomes, isolates each cache and configuration, continues through failures or stops new work and drains in-flight cases. Focused normal and V/C ASan/UBSan matrices passed 72 live histories, 228 successful offline replays, 108 expected corrupt/incompatible rejections and 132 skipped cases across both servers, three codecs and storage on/off. Aggregate/current Linux validation remains. The next gate binds the pinned time-skipping executable in its artifact manifest; current Linux verification remains pending.",
+      "local_evidence": [
+        "replay-results.json",
+        "patch-results.json",
+        "environment-results.json",
+        "raw-history-results.json",
+        "wait-deadline-results.json",
+        "replay-batch-results.json"
+      ]
+    },
+    {
+      "id": "native-safety",
+      "status": "partial",
+      "detail": "Callback/buffer/lifetime ownership, text validation, drains, signal ownership, concurrent close and RPC token close implemented. C Address/UB sanitizer probe covers real RPC and concurrent-close paths; Bundled Boehm C inherits instrumentation but individual GC heap-object bounds are not tracked; Rust Core is uninstrumented. Rust sanitizers and broader fault injection remain. Activity preparation and result conversion now have a single-completion recovery boundary, covering codec, failure-converter and storage panics while releasing metric/storage leases. Focused normal tests passed 44 histories, subsequent successful work with one-slot storage limits, replacement and offline replay. Original 96-history panic regression passed; expanded instrumentation, 103-report aggregate and Linux validation remain pending. The final normal, optimized and V/C ASan/UBSan extension matrices passed all 44 histories with explicit maximum-attempt retry assertions; normal and instrumented 96-history panic regressions passed. Source/compiler/native/executable/report bindings were checked before and after validation. Aggregate and Linux validation remain pending.",
+      "local_evidence": [
+        "service-results.json",
+        "combined-results.json",
+        "sanitizer-results.json",
+        "panic-extensions-results.json"
+      ]
+    },
+    {
+      "id": "linux-amd64",
+      "status": "partial",
+      "detail": "The last complete aggregate is the retained SDK76/Core10 evidence. The current frozen API1 integration and corrected marker-lookahead runtime still require the full 137-report suite, runtime restart/drain and cross-SDK container replay on this target. Docker is responsive; architecture builds are serialized to fit the Linux VM memory.",
+      "local_evidence": [
+        "linux-amd64-evidence-68-480c637/check-verification.json",
+        "linux-amd64-evidence-68-480c637/container-amd64-results.json"
+      ]
+    },
+    {
+      "id": "linux-arm64",
+      "status": "partial",
+      "detail": "API1 release binaries and matching runtime images built successfully. One run passed 118 reports before a Linux argv limit in a 300 KB Nexus fixture; the file-input correction passed a 12-history Linux preflight. The fresh run then passed 86 reports before exposing a genuine LA/SideEffect cross-task replay defect. The captured history fails deterministically on Core14; its corrected marker lookahead and paginated-history regressions passed all 783 Rust unit tests (one upstream ignore). The corrected 48-artifact build and full 137-report Linux suite, runtime containers and cross-SDK container replay remain pending. No complete current-source Linux gate has passed.",
+      "local_evidence": [
+        "linux-arm64-evidence-68-480c637/check-verification.json",
+        "linux-arm64-evidence-68-480c637/container-arm64-results.json"
+      ]
+    },
+    {
+      "id": "release-supply-chain",
+      "status": "partial",
+      "detail": "Digest-pinned build/runtime bases, self-contained development package, native relocation, source/header licenses and file checksums tested with a separate V consumer. Production license/NOTICE inventory, reproducible release builds, SBOM, signed artifacts and support policy remain.",
+      "local_evidence": [
+        "package-results.json"
+      ]
+    },
+    {
+      "id": "reliability",
+      "status": "partial",
+      "detail": "Restart/outage recovery, coordinated cancellation/load, and a frozen 6,400-workflow/680-second run passed with 5,600 completions and 800 cancellations. Peak worker RSS was 114/52 MiB. Production-duration soak, longer memory trends, mid-Activity side effects and cross-SDK-version replay remain.",
+      "local_evidence": [
+        "restart-results.json",
+        "combined-results.json",
+        "outage-results.json",
+        "load-results.json",
+        "soak-load/verification.json"
+      ]
+    },
+    {
+      "id": "external-payload-storage",
+      "status": "partial",
+      "detail": "Driver/selector API, bounded store/retrieve concurrency, standard references, schema-aware unary RPC and worker boundaries, replay upload suppression, raw history export, local Activity result offload and typed storage failure causes implemented. Drivers own retention, integrity, access and transport timeouts/cancellation. Synchronous driver calls cannot be forcibly interrupted. Cross-language storage transports, broader fault tests and Linux evidence for this implementation remain. Host tests cover 3 MiB remote/local payloads, protected query/Update failures, manager concurrency, driver outages/repair, child/result/continue-as-new/external-signal storage ownership and replay without uploads. Driver types are forwarded to Core worker metadata; native traversal tests are frozen build artifacts. Activation retrieval now retains workflow identity in the poller from initialization through later activations, clearing it on eviction; scope-enforcing memo/signal/replay tests passed.",
+      "local_evidence": [
+        "external-storage-results.json"
+      ]
+    },
+    {
+      "id": "plugins",
+      "status": "partial",
+      "detail": "Snapshot-based connection/client/worker/replay configuration, shared-client propagation, reusable bundles, isolated registries, named phase-specific errors and Core plugin metadata implemented. Prototype live execution, worker recreation, SIGKILL/offline replay and reported worker metadata passed. Aggregate and Linux validation of the integrated implementation remain.",
+      "local_evidence": [
+        "plugins-results.json"
+      ]
+    },
+    {
+      "id": "schedules",
+      "status": "partial",
+      "detail": "Reusable action encoding, lifecycle, encoded-action-preserving updates, pagination, optional memo/attribute replacement and all spec/policy schema fields are implemented. Isolated normal and instrumented four-case legacy/CHASM codec matrices passed for concurrent backfills, restart and offline replay. Conflict enforcement/memo clearing require the supporting scheduler; strict exact-ID codecs remain limited by observed server timestamp suffix behavior. Expanded aggregate and Linux verification remain. The integrated candidate passed all 64 host reports including instrumented matrices at source 5499386ff5f1755d997435103edc69c8e9b651bcb0a97b79e99ec6eec0ba74d8; current Linux validation remains outstanding.",
+      "local_evidence": [
+        "schedule-results.json",
+        "schedule-sanitized-results.json"
+      ]
+    },
+    {
+      "id": "batch-operations",
+      "status": "partial",
+      "detail": "Explicit/query target selection, operation/rate validation, generated operation variants, converted signal/termination helpers, describe/list/stop and bounded wait are implemented. Initial live prototype passed six-target signal/cancel/terminate, duplicate IDs, details, worker replacement, stop/list and offline replay with/without codecs. Expanded two-server query/deadline/pagination, instrumented aggregate and Linux verification remain. The expanded normal four-case two-server codec matrix passed for explicit/query targets, local validation, independent headers/termination details, duplicate IDs, list pagination, wait timeout/stop, SIGKILL/replacement and 36 offline histories. Server 1.32 omits newer headers/details and ignores request rate; fixture server rate caps make stop/deadline checks deterministic. Full aggregate/instrumented integration remains pending. The integrated candidate passed all 64 host reports including instrumented matrices at source 5499386ff5f1755d997435103edc69c8e9b651bcb0a97b79e99ec6eec0ba74d8; current Linux validation remains outstanding. The next candidate preserves early wait errors and maps an expired overall wait budget to deadline status even if transport cancellation arrives first. A focused Linux arm64 matrix passed forty one-millisecond waits, early missing-job errors and all thirty-six replay histories.",
+      "local_evidence": [
+        "batch-results.json"
+      ]
+    },
+    {
+      "id": "side-effects",
+      "status": "partial",
+      "detail": "SideEffect/mutable SideEffect implemented through a maintained Core marker command/state machine and replay lookahead, with typed scoped conversion/storage and a required native protocol capability. Focused normal and V/C ASan/UBSan matrices passed 36 histories/132 markers each; another 36-history count-changing codec/storage matrix passed. Eight changed-code histories verified task/global/per-type policies and repair/cancellation; all 24 incompatible offline replays were rejected. Actual Go SDK 1.35.0 histories passed Go-to-V replacement after explicit sticky-queue reset and offline replay by both languages. Mixed patch/local Activity marker tests, integrated aggregate and both Linux architectures remain unverified for this extension. The expanded V/C ASan/UBSan matrix passed all 144 histories/672 markers, including patch/local Activity interleaving and six codec profiles, with and without storage. Eight changed-code histories/24 rejected replays and the two Go reference histories also passed instrumented validation. Integrated aggregate and both Linux architectures remain pending. The integrated Core13 source 572498031cf0eb12ba9ff9a4d83e94330c6b53ffb413ca9c8804b4b7d598baa4 passed all 85 host reports including the full V/C sanitizer matrix; exact source, reports and all bound artifacts are frozen in host-evidence-85-5724980. Current Linux validation remains unverified.",
+      "local_evidence": [
+        "side-effect-results.json",
+        "side-effect-errors-results.json",
+        "side-effect-go-replay-results.json"
+      ]
+    },
+    {
+      "id": "dynamic-updates",
+      "status": "partial",
+      "detail": "Dynamic-only and named-priority raw Update dispatch, codec/storage decoding, metadata, validator isolation, deferred completion and deduplication implemented. Normal, optimized and V/C sanitizer matrices each passed 24 histories with SIGKILL/replacement and offline replay; 28 handler lifecycle regression histories passed instrumented validation. Aggregate and Linux amd64/arm64 validation remain.",
+      "local_evidence": [
+        "dynamic-updates-results.json"
+      ]
+    },
+    {
+      "id": "raw-dynamic-interactions",
+      "status": "partial",
+      "detail": "Named query/signal declarations and raw dynamic fallback preserve codecs, external storage, opaque bytes, owned views, metadata and interceptors. Normal, optimized and V/C sanitizer matrices each passed 60 histories covering dynamic-only/mixed handlers, query isolation, signal task failure, three invalid/ambiguous registration classes, replacement and offline replay. Each recorded 12 bounded query deadlines during task failure/replacement; the exact transient HTTP/2 reset is also retried and recorded. Existing dynamic Update matrices passed 24 histories in normal and instrumented builds; numeric versions passed 60 histories/72 incompatible rejections. Aggregate host and Linux validation remain.",
+      "local_evidence": [
+        "raw-interactions-results.json"
+      ]
+    },
+    {
+      "id": "extension-callback-recovery",
+      "status": "partial",
+      "detail": "Custom gRPC call/connect and metric/trace export/shutdown panics use their established failure paths. Normal, optimized and V/C sanitizer tests passed both servers with concurrent failing/successful RPCs, redaction, callback defers, closed contexts, native queue/point/definition/label cleanup and clean dispatcher completion. Original gRPC worker restart/replay, custom metric lifecycle/replay and bounded provider regressions passed in all three builds. Aggregate and Linux verification remain.",
+      "local_evidence": [
+        "extension-callbacks-results.json"
+      ]
+    },
+    {
+      "id": "raw-dynamic-activities",
+      "status": "partial",
+      "detail": "Named priority and owned raw dynamic remote/local Activity dispatch passed 24 workflow histories plus 12 standalone Activities in normal, optimized and V/C sanitizer builds. Existing dynamic, named panic (96 histories) and converter/storage panic (44 histories) regressions passed. Aggregate/Linux verification remain.",
+      "local_evidence": [
+        "raw-activities-results.json"
+      ]
+    },
+    {
+      "id": "query-replay-observability",
+      "status": "partial",
+      "detail": "Separate activation/history replay flags match the pinned Rust SDK. Six query restart/replay histories passed per normal/optimized/V-C sanitizer build; 108 tracing and 198 sampling histories passed normal and instrumented regression. Aggregate/current Linux verification remain.",
+      "local_evidence": [
+        "query-observation-results.json"
+      ]
+    },
+    {
+      "id": "raw-activity-heartbeats",
+      "status": "partial",
+      "detail": "Explicit typed/string checkpoint decoding with owned raw access passed 12 two-restart codec/storage histories per normal/optimized/sanitizer build. Existing typed details (112 histories), malformed checkpoint, retry and eager standalone regressions passed. Aggregate and Linux remain.",
+      "local_evidence": [
+        "raw-heartbeat-results.json"
+      ]
+    },
+    {
+      "id": "raw-dynamic-workflows",
+      "status": "partial",
+      "detail": "Raw dynamic workflow start dispatch and explicit scoped conversion passed 48 histories in each normal/optimized/V-C sanitizer build, with named priority, failed-task repair, storage/codecs, restart and replay. Existing dynamic suite passed. Aggregate and Linux remain.",
+      "local_evidence": [
+        "raw-workflow-results.json"
+      ]
+    },
+    {
+      "id": "activity-context-client",
+      "status": "partial",
+      "detail": "Independent client handles on existing worker connections preserve shared configuration/plugins/interceptors and Activity trace context. Each normal/optimized/V-C sanitizer build passed 144 restart/replay histories, including original client close and retained clients after worker drain. Transport/metric/extension regressions passed normal and instrumented builds. Aggregate/current Linux remain.",
+      "local_evidence": [
+        "activity-client-results.json"
+      ]
+    },
+    {
+      "id": "nexus-context-client",
+      "status": "partial",
+      "detail": "Independent handler clients share the worker connection/configuration and do not rerun plugin hooks. Normal/optimized/V-C sanitizer matrices each passed 144 two-server codec/storage/direct/shared histories with start/cancel, callback completion, replacement and offline replay. Existing workflow/Activity/interaction/Update regressions passed normal and instrumented builds. Aggregate and Linux remain.",
+      "local_evidence": [
+        "nexus-context-results.json"
+      ]
+    },
+    {
+      "id": "activity-task-token-deadline",
+      "status": "partial",
+      "detail": "Owned JSON-redacted tokens and exact deadlines passed 12 histories, 48 independent server deadline checks and 48 local bounds per normal/optimized/V-C sanitizer build. Includes authenticated heartbeats, retries, unlimited schedule timeout, restart and replay. Original scheduling metadata and Activity retry/backoff/cancellation suites passed. Aggregate and Linux remain.",
+      "local_evidence": [
+        "activity-deadline-results.json"
+      ]
+    },
+    {
+      "id": "experimental-event-groups",
+      "status": "partial",
+      "detail": "Opt-in groups passed 144 histories in each normal/optimized/V-C sanitizer build, with nested/direct/implicit correlation, codecs/storage, local backoff/cancellation, continuation/external/failure/cancellation, task repair, replacement and replay. Six handler/version/panic regressions passed. The integrated candidate requires its own host/Linux gate.",
+      "local_evidence": [
+        "event-groups-results.json"
+      ]
+    },
+    {
+      "id": "workflow-context-values",
+      "status": "partial",
+      "detail": "Typed runtime scope values and captured command continuations passed 108 histories per normal/optimized/V-C sanitizer build. Includes eight concurrent executions, nested/type/error isolation, local-backoff worker loss, panic repair and replay. Normal/instrumented Event Groups (144), handler lifecycle (28), numeric versions (60/72 rejected replays) and panic (96) regressions passed. Eleven exact-bound reports are retained. Aggregate/current Linux remain.",
+      "local_evidence": [
+        "context-values-results.json"
+      ]
+    },
+    {
+      "id": "workflow-conditions",
+      "status": "partial",
+      "detail": "Deterministic condition waits, captured continuation, lazy durable timeouts, cancellation/shielding and first-cause propagation passed 96 histories per normal/optimized/V-C sanitizer build. Ten context/group/handler/version/panic and two scope regressions passed; 15 bound reports retained. Aggregate/current Linux remain.",
+      "local_evidence": [
+        "conditions-results.json"
+      ]
+    },
+    {
+      "id": "raw-activity-headers",
+      "status": "partial",
+      "detail": "Owned raw headers and explicit scoped conversion passed 48 histories/192 named/dynamic remote/local Activities per normal/optimized/V-C sanitizer build. Actual 300003-byte wire payloads/external references, binary metadata, ownership, error isolation, replacement and replay checked. Typed metadata (112), tracing (108), and converter/storage panic (44) regressions passed normal/instrumented builds. Nine bound reports retained. Aggregate/Linux remain.",
+      "local_evidence": [
+        "raw-headers-results.json"
+      ]
+    },
+    {
+      "id": "activity-workflow-handle",
+      "status": "partial",
+      "detail": "Workflow-backed Activity handles and namespace metadata passed 168 histories and 24 standalone Activities per normal/optimized/V-C sanitizer build, including direct/shared clients, plugin/trace/lifetime, custom namespace, replacement and replay. Four deadline/raw-header regressions passed; seven bound reports retained. Aggregate/Linux remain.",
+      "local_evidence": [
+        "parent-handle-results.json"
+      ]
+    },
+    {
+      "id": "raw-workflow-interaction-headers",
+      "status": "partial",
+      "detail": "Owned raw workflow/event/query/validator headers and explicit scoped conversion passed 48 histories, 144 queries and 96 Update/deduplication calls per normal/optimized/V-C sanitizer build. Poisoned-validator restart/offline replay and six raw-header/interaction/dynamic-Update regressions passed; nine bound reports retained. Aggregate/Linux remain.",
+      "local_evidence": [
+        "workflow-headers-results.json"
+      ]
+    },
+    {
+      "id": "codec-payload-ownership",
+      "status": "partial",
+      "detail": "Deep codec-boundary snapshots fix a reproduced retained-wire mutation. Each normal/optimized/V-C sanitizer build passed 1,800 rounds/eight threads and 108 live histories through Activities, headers and Event Groups. Six typed-details/SideEffect/panic regressions passed; nine bound reports retained. Aggregate/Linux remain.",
+      "local_evidence": [
+        "codec-ownership-results.json"
+      ]
+    },
+    {
+      "id": "experimental-patch-policy",
+      "status": "partial",
+      "detail": "Fresh-patch activation policy passed 72 histories per normal/optimized/V-C sanitizer build, including memoization, declined cohorts, history/deprecation bypass, numeric independence, owned metadata, read-only guard, panic repair and poisoned restart/offline replay. Eight version/group/deadline/panic regressions passed; eleven bound reports retained. Aggregate/Linux remain.",
+      "local_evidence": [
+        "patch-policy-results.json"
+      ]
+    },
+    {
+      "id": "instrumented-image-evidence",
+      "status": "partial",
+      "detail": "Persistent sanitizer image/compiler/compile-link command binding passed real ASAN/UBSAN execution, image tamper rejection, final-gate rejection and immutable archive tests. Two exact-bound reports retained. Full aggregate pending.",
+      "local_evidence": [
+        "validation-artifacts-results.json"
+      ]
+    },
+    {
+      "id": "worker-lifecycle-interceptors",
+      "status": "partial",
+      "detail": "Worker/replay middleware and drained shutdown hooks passed 108 histories per normal/optimized/V-C sanitizer build, plus eight normal/instrumented conditions/patch-policy/Nexus/panic regressions. Eleven bound reports cover 876 histories. Aggregate/current Linux remain.",
+      "local_evidence": [
+        "worker-hooks-results.json"
+      ]
+    },
+    {
+      "id": "worker-completion-observers",
+      "status": "partial",
+      "detail": "Owned encoded/stored completion observers passed 204 histories per normal/optimized/V-C sanitizer build, with actual nested snapshot mutation, isolated panic, codec/storage ordering, failures, worker loss and replay. Eight regressions and final focused proof are in progress; aggregate/Linux remain.",
+      "local_evidence": [
+        "worker-completion-results.json"
+      ]
+    },
+    {
+      "id": "worker-activation-observers",
+      "status": "partial",
+      "detail": "Owned pre-execution activation observers and schema-derived traversal passed 240 histories per normal/optimized/V-C sanitizer build. Eight enabled-observer raw-header/workflow-header/Event Group/extension-panic regressions passed. Eleven bound reports cover 1,288 histories. Aggregate/current Linux remain.",
+      "local_evidence": [
+        "worker-activation-results.json"
+      ]
+    },
+    {
+      "id": "activity-cancellation-waits",
+      "status": "partial",
+      "detail": "Nonthrowing polls, heartbeat-preserving waits and stable owned cancellation information implemented. Fixed cooperative local-Activity shutdown by honoring native monotonic grace and interrupting its WFT for replacement replay. Ten quick histories passed, including mixed concurrency, control/SIGTERM, timeout/not-found and progress preservation. Expanded matrices and aggregate/Linux remain.",
+      "local_evidence": [
+        "activity-wait-results.json"
+      ]
+    },
+    {
+      "id": "read-only-workflow-context",
+      "status": "partial",
+      "detail": "Hard-cut named/dynamic query and Update-validator context API, scoped interceptor values and captured-command exclusion implemented. Initial four-history live/restart/offline test passed; full matrices, aggregate and Linux remain.",
+      "local_evidence": [
+        "readonly-view-results.json"
+      ]
+    },
+    {
+      "id": "sdk-upgrade-replay",
+      "status": "partial",
+      "detail": "Unchanged frozen SDK120 sources compiled for each target. Live upgrade/rollback and dual replayer corpus implemented; validation pending.",
+      "local_evidence": [
+        "upgrade-replay-results.json"
+      ]
+    }
+  ],
+  "validated_host_baseline": {
+    "source_sha256": "aed0669fea58add409d82d5763a24065dc9944340098041076726a8fe56bb6b9",
+    "required_reports": 120,
+    "bound_artifacts": 43,
+    "includes_v_c_sanitizers": true,
+    "archive": "host-evidence-120-aed0669",
+    "validates_this_candidate": false
+  },
+  "candidate_validation": {
+    "required_reports": 137,
+    "bound_artifacts": 47,
+    "aggregate_host": "pending",
+    "linux_amd64": "pending",
+    "linux_arm64": "pending",
+    "linux_blocker": "",
+    "instrumented_image_binding": "Implemented: persistent sanitizer executable hashes, compiler and compile/link commands; real instrumented execution and tamper/archival tests passed. Aggregate pending."
+  },
+  "api_contract": {
+    "version": "1.0.0-rc.1",
+    "major": 1,
+    "path": "release/api-contract.json",
+    "policy": "release/API-POLICY.md",
+    "status": "frozen"
+  }
+}
