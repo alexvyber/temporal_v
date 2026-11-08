@@ -847,7 +847,8 @@ include flags and exercises it against Temporal. This is not a published release
 | Input | Revision |
 | --- | --- |
 | Temporal Rust SDK | `67174ea96e8a06bc33137036e73cfaf508aa9dd7` |
-| V | `213eb9b920b91bcbb2d24c5b98a48d3f49137a42` |
+| V SDK compiler | `213eb9b920b91bcbb2d24c5b98a48d3f49137a42` |
+| V formatter | `0.5.2`, source and bootstrap checksums in `locks/v-formatter.json` |
 | V bootstrap C | `a5a8c9313a3e5ff07061dce993598ee2b326b4ea` |
 | `we-be/protobuf.v` | `64811280130b2b4bda45eba707512412ace968ad` |
 | Temporal CLI / dev server | `1.10.0` / `1.32.2` |
@@ -2091,4 +2092,12 @@ Workers reject native libraries without the marker-lookahead capability.
 
 The test client accepts `--input-file` for large JSON values. Integration fixtures
 use it above 64 KiB so the full payload reaches the SDK without exceeding Linux's
-per-argument limit. All owned V files must pass pinned `v fmt` verification.
+per-argument limit. All owned V files must pass the separately pinned V 0.5.2 formatter.
+Bootstrap installs it with `python3 scripts/prepare_formatter.py`; format checks
+and all generators use `scripts/format_v.py`, independently of the SDK compiler.
+`python3 scripts/format_v.py .` writes formatting and adding `--check` verifies
+without rewriting. A local V 0.5.2 installation's `v fmt -w .` produces the same
+format. Generated output is formatted to a verified fixed point before exact
+byte comparisons; generation checks never rewrite repository sources.
+Run `python3 scripts/formatter_test.py` for the focused formatter/generator
+regressions without building the SDK or starting Temporal.

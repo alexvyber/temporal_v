@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
+python3 "$SPIKE_ROOT/scripts/prepare_formatter.py" --check
 python3 "$SPIKE_ROOT/scripts/prepare_v_runtime.py" "$SPIKE_ARTIFACTS/tools/v" --check
 build_log=''
 trap 'task_build_status=$?; if [ -n "$build_log" ] && [ -f "$build_log" ]; then tail -100 "$build_log" >&2; fi; exit "$task_build_status"' ERR
@@ -85,24 +86,14 @@ build_log="$SPIKE_ARTIFACTS/logs/generator-build.log"
     "$VMODULES/protobuf/cmd/vpbgen" > "$SPIKE_ARTIFACTS/logs/generator-build.log" 2>&1
 
 build_log="$SPIKE_ARTIFACTS/logs/core-generation.log"
-"$SPIKE_ARTIFACTS/tools/vpbgen" -json -m temporal \
-    -I "$SPIKE_RUST/crates/protos/protos/api_upstream" \
-    -I "$SPIKE_RUST/crates/protos/protos/local" \
-    -I "$SPIKE_RUST/crates/protos/protos/testsrv_upstream" \
-    -I "$SPIKE_RUST/crates/protos/protos/api_cloud_upstream" \
-    -I "$SPIKE_RUST/crates/protos/protos" \
-    -o "$SPIKE_ROOT/temporal/core_pb.v" \
-    "$SPIKE_ROOT/schemas/sdk.proto" \
-    > "$SPIKE_ARTIFACTS/logs/core-generation.log" 2>&1
+python3 "$SPIKE_ROOT/scripts/generate_protobuf.py" > "$SPIKE_ARTIFACTS/logs/core-generation.log" 2>&1
 
-"$SPIKE_V" -d use_bundled_libgc fmt -w "$SPIKE_ROOT/temporal/core_pb.v" > "$SPIKE_ARTIFACTS/logs/schema-format.log" 2>&1
-
-python3 "$SPIKE_ROOT/scripts/generate_service.py" --rust "$SPIKE_RUST" --v "$SPIKE_V"
+python3 "$SPIKE_ROOT/scripts/generate_service.py" --rust "$SPIKE_RUST"
 python3 "$SPIKE_ROOT/scripts/generate_activation_decoder.py"
 
 build_log="$SPIKE_ARTIFACTS/logs/payload-bridge-build.log"
 python3 "$SPIKE_ROOT/scripts/build_payload_bridge.py" --profile "$profile" > "$build_log" 2>&1
-"$SPIKE_V" -d use_bundled_libgc fmt -w "$SPIKE_ROOT/corebridge/payloads.v" "$SPIKE_ROOT/sdk/external_storage.v" "$SPIKE_ROOT/sdk/storage_worker.v" "$SPIKE_ROOT/sdk/storage_targets.v" > "$SPIKE_ARTIFACTS/logs/storage-format.log" 2>&1
+python3 "$SPIKE_ROOT/scripts/format_v.py" "$SPIKE_ROOT/corebridge/payloads.v" "$SPIKE_ROOT/sdk/external_storage.v" "$SPIKE_ROOT/sdk/storage_worker.v" "$SPIKE_ROOT/sdk/storage_targets.v" > "$SPIKE_ARTIFACTS/logs/storage-format.log" 2>&1
 
 case "$(uname -s)" in
     Darwin) link_flags="$CARGO_TARGET_DIR/$profile/libtemporalio_sdk_core_c_bridge.dylib $CARGO_TARGET_DIR/$profile/libtemporal_v_payloads.dylib -Wl,-rpath,$CARGO_TARGET_DIR/$profile" ;;

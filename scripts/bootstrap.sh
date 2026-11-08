@@ -8,6 +8,7 @@ vc_revision=a5a8c9313a3e5ff07061dce993598ee2b326b4ea
 protobuf_revision=64811280130b2b4bda45eba707512412ace968ad
 core_revision=67174ea96e8a06bc33137036e73cfaf508aa9dd7
 mkdir -p "$SPIKE_ARTIFACTS/tools" "$SPIKE_ARTIFACTS/logs" "$VMODULES"
+python3 "$SPIKE_ROOT/scripts/prepare_formatter.py"
 
 fetch_source() {
     local repository="$1" revision="$2" destination="$3"

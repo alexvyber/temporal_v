@@ -34,7 +34,7 @@ def compiled_inputs(snapshot):
     files = {name: value for name, value in snapshot['files'].items()
              if Path(name).suffix in ('.v', '.c', '.h', '.rs', '.proto', '.patch') or name == 'v.mod'
              or name.startswith(('locks/', 'patches/'))
-             or name in ('scripts/build.sh', 'scripts/env.sh', 'scripts/bootstrap.sh', 'scripts/generate_service.py', 'scripts/build_payload_bridge.py', 'scripts/harden_protobuf.py', 'scripts/verify_core_source.py', 'scripts/prepare_v_runtime.py', 'scripts/generate_activation_decoder.py', 'scripts/build_replay_baseline_v1.py', 'scripts/api_contract.py')
+             or name in ('scripts/build.sh', 'scripts/env.sh', 'scripts/bootstrap.sh', 'scripts/generate_service.py', 'scripts/generate_protobuf.py', 'scripts/build_payload_bridge.py', 'scripts/harden_protobuf.py', 'scripts/verify_core_source.py', 'scripts/prepare_v_runtime.py', 'scripts/prepare_formatter.py', 'scripts/format_v.py', 'scripts/generate_activation_decoder.py', 'scripts/build_replay_baseline_v1.py', 'scripts/api_contract.py')
              or name in ('release/api-contract.json', 'release/compatibility/replay-baseline-v1.json', 'release/compatibility/replay-baseline-v1-source.tar.gz')}
     return hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
 

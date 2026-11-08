@@ -6,20 +6,15 @@ RPC signatures avoids importing HTTP/OpenAPI annotation extensions into vpbgen.
 import argparse
 from pathlib import Path
 import re
-import subprocess
+from format_v import formatted_source
 
 
 def snake(name):
     return re.sub(r'(?<!^)(?=[A-Z][a-z]|(?<=[a-z0-9])[A-Z])', '_', name).lower()
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--rust', type=Path, required=True)
-    parser.add_argument('--v', type=Path, required=True)
-    args = parser.parse_args()
-    root = Path(__file__).resolve().parent.parent
-    protos = args.rust / 'crates/protos/protos'
+def generate(root, rust, check=False):
+    protos = rust / 'crates/protos/protos'
     services = [
         ('workflow', '', 'api_upstream/temporal/api/workflowservice/v1/service.proto', 'TemporalApiWorkflowserviceV1_'),
         ('operator', 'operator_', 'api_upstream/temporal/api/operatorservice/v1/service.proto', 'TemporalApiOperatorserviceV1_'),
@@ -28,7 +23,7 @@ def main():
         ('health', 'health_', 'grpc/health/v1/health.proto', 'GrpcHealthV1_'),
     ]
     messages = (root / 'temporal/core_pb.v').read_text()
-    bridge = (args.rust / 'crates/sdk-core-c-bridge/src/client.rs').read_text()
+    bridge = (rust / 'crates/sdk-core-c-bridge/src/client.rs').read_text()
     counts = {}
     for service, method_prefix, schema, type_prefix in services:
         signatures = re.findall(r'\brpc\s+(\w+)\s*\(\s*([\w.]+)\s*\)\s*returns\s*\(\s*([\w.]+)\s*\)', (protos / schema).read_text())
@@ -53,10 +48,22 @@ def main():
                        f"\treturn temporal.{response}.decode(client.call(.{service}, '{method}', request.encode())!)!", '}', '']
         filename = 'time_skipping_service.v' if service == 'test' else f'{service}_service.v'
         destination = root / 'sdk' / filename
-        destination.write_text('\n'.join(output))
-        subprocess.run([str(args.v), '-d', 'use_bundled_libgc', 'fmt', '-w', str(destination)], check=True, stdout=subprocess.DEVNULL)
+        content = formatted_source('\n'.join(output), filename)
+        if check:
+            if destination.read_text() != content:
+                raise RuntimeError(f'{filename}: generated RPC methods differ; regenerate')
+        else:
+            destination.write_text(content)
         counts[service] = len(signatures)
     print('Generated typed RPC methods: ' + ', '.join(f'{name}={count}' for name, count in counts.items()))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--rust', type=Path, required=True)
+    parser.add_argument('--check', action='store_true')
+    args = parser.parse_args()
+    generate(Path(__file__).resolve().parent.parent, args.rust, args.check)
 
 
 if __name__ == '__main__':

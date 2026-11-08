@@ -4,7 +4,8 @@ Only types reachable from Core activation jobs are emitted. This preserves
 unknown fields, repeated-payload codec cardinality and singular map entries.
 Search attributes and propagator-owned headers remain untouched.
 """
-import argparse,re,os,subprocess,tempfile
+import argparse,re
+from format_v import formatted_source
 from pathlib import Path
 
 def generate(root):
@@ -66,20 +67,16 @@ def generate(root):
   lines += [' return result','}','']
  return '\n'.join(lines),needed
 
-def main():
- parser=argparse.ArgumentParser();parser.add_argument('--check',action='store_true');args=parser.parse_args();root=Path(__file__).resolve().parent.parent
+def regenerate(root,check=False):
  content,needed=generate(root);file=root/'sdk/activation_payloads.v'
- artifacts=Path(os.environ.get('SPIKE_ARTIFACTS',root.parent/'artifacts/v-sdk-spike')).resolve()
- compiler=artifacts/'tools/v/v'
- # Canonical generated output follows the same pinned formatter as hand-written V.
- # --check renders into a temporary file and never rewrites repository sources.
- with tempfile.TemporaryDirectory(prefix='activation-format-') as temporary:
-  rendered=Path(temporary)/'activation_payloads.v';rendered.write_text(content)
-  subprocess.run([str(compiler),'-d','use_bundled_libgc','fmt','-w','-no-migrate-json2',str(rendered)],check=True,stdout=subprocess.DEVNULL)
-  content=rendered.read_text()
- if args.check:
+ content=formatted_source(content, file.name)
+ if check:
   if file.read_text()!=content:raise RuntimeError('activation decoder differs from protobuf graph; regenerate')
  else:file.write_text(content)
  print(f'Activation payload decoder: {len(needed)} schema-derived types')
+
+def main():
+ parser=argparse.ArgumentParser();parser.add_argument('--check',action='store_true');args=parser.parse_args()
+ regenerate(Path(__file__).resolve().parent.parent,args.check)
 
 if __name__=='__main__':main()

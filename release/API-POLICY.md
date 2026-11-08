@@ -6,7 +6,9 @@ The public V API is frozen for major version 1. The integration candidate is
 callback signatures and construction attributes. Builds and the full check suite
 verify the lock. Whitespace and formatter layout do not change the API; token
 boundaries, quoted defaults, types and attributes remain contractual. Builds
-never regenerate the lock. All V files must pass the pinned `v fmt` check. Breaking public changes require a
+never regenerate the lock. All V files must pass the separately pinned V 0.5.2 formatter check
+(`locks/v-formatter.json`), also used by every generator. The SDK compiler
+and runtime retain their independent pin. Breaking public changes require a
 new major contract and explicit review; do not add old-signature fallback paths.
 
 Query and Update-validator callbacks take `WorkflowContextView` as their final

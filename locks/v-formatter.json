@@ -1,0 +1,11 @@
+{
+  "version": "0.5.2",
+  "source": {
+    "url": "https://codeload.github.com/vlang/v/tar.gz/refs/tags/0.5.2",
+    "sha256": "1a05f646fba9516ec6307979b282d0cc5327075bef268d40c0ca7d0b887e4f52"
+  },
+  "bootstrap": {
+    "url": "https://codeload.github.com/vlang/vc/tar.gz/7eb8c54a3843e5107d5af06d7a8c3e928f322475",
+    "sha256": "255d5e999edf71dd2786c06a0fdcda47ecfd79d9fde3c9cf7548e36996284f45"
+  }
+}

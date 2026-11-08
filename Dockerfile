@@ -8,8 +8,8 @@ ENV SPIKE_ARTIFACTS=/build/artifacts \
     CARGO_BUILD_JOBS=1 \
     SPIKE_BUILD_PROFILE=release
 WORKDIR /build/v-sdk
-COPY scripts/bootstrap.sh scripts/env.sh scripts/install_test_server.py scripts/prepare_v_runtime.py scripts/
-COPY locks/test-server.json locks/
+COPY scripts/bootstrap.sh scripts/env.sh scripts/install_test_server.py scripts/prepare_v_runtime.py scripts/prepare_formatter.py scripts/
+COPY locks/test-server.json locks/v-formatter.json locks/
 COPY patches/oneof-case-names.patch patches/v-panic-stack.patch patches/
 COPY locks/v-runtime.json locks/v-runtime.json
 RUN bash scripts/bootstrap.sh
