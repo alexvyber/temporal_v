@@ -1,0 +1,13 @@
+diff --git a/crates/sdk-core-c-bridge/src/lib.rs b/crates/sdk-core-c-bridge/src/lib.rs
+--- a/crates/sdk-core-c-bridge/src/lib.rs
++++ b/crates/sdk-core-c-bridge/src/lib.rs
+@@ -111,9 +111,6 @@ impl ByteArrayRef {
+                 data: unsafe { self.data.add(index + 1) },
+                 size: self.size - index - 1,
+             };
+-            let _value_str = unsafe {
+-                std::str::from_utf8_unchecked(std::slice::from_raw_parts(value.data, value.size))
+-            };
+             Some((key_str, value))
+         } else {
+             None

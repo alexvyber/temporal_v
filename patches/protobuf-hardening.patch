@@ -1,0 +1,1757 @@
+--- a/decoder.v
++++ b/decoder.v
+@@ -1,6 +1,7 @@
+ module protobuf
+ 
+ import math
++import encoding.utf8
+ 
+ // Decoder walks a message buffer: read_tag, then a typed read per known
+ // field, skip() for unknown ones. read_bytes returns a copy, so decoded
+@@ -12,6 +13,8 @@
+ 	buf []u8
+ pub mut:
+ 	pos int
++mut:
++	last_field u32
+ }
+ 
+ pub fn (d &Decoder) more() bool {
+@@ -49,6 +52,7 @@
+ 		}
+ 		b := d.buf[d.pos]
+ 		d.pos++
++		if shift == 63 && b > 1 { return error('varint exceeds 64 bits') }
+ 		result |= u64(b & 0x7f) << shift
+ 		if b & 0x80 == 0 {
+ 			return result
+@@ -62,28 +66,26 @@
+ pub fn (mut d Decoder) read_tag() !(u32, WireType) {
+ 	// single-byte tag fast path: b0 in [0x08, 0x7f] is a one-byte varint whose
+ 	// field number is 1..15 (0x08 lower bound rejects field 0) — decoded inline
+-	// without the read_varint call or the overlong-length check
++	// without another read_varint call
+ 	if d.pos < d.buf.len {
+ 		b0 := d.buf[d.pos]
+ 		if b0 >= 0x08 && b0 < 0x80 {
+ 			d.pos++
+ 			wt := wire_type_from(u64(b0) & 7)!
+-			return u32(b0) >> 3, wt
+-		}
+-	}
+-	start := d.pos
++			d.last_field = u32(b0) >> 3
++			return d.last_field, wt
++		}
++	}
+ 	v := d.read_varint()!
+-	// a tag is a 32-bit varint: field numbers cap at 2^29, so a conformant
+-	// tag is at most 5 bytes. reject overlong encodings, as protoc does.
+-	if d.pos - start > 5 {
+-		return error('overlong tag varint')
+-	}
++	// Redundant zero groups are valid varint encodings; validate the decoded
++	// field number instead of rejecting a longer representation of it.
+ 	field := v >> 3
+ 	if field == 0 || field > 0x1FFFFFFF {
+ 		return error('invalid field number ${field}')
+ 	}
+ 	wt := wire_type_from(v & 7)!
+-	return u32(field), wt
++	d.last_field = u32(field)
++	return d.last_field, wt
+ }
+ 
+ @[direct_array_access]
+@@ -124,7 +126,9 @@
+ 
+ pub fn (mut d Decoder) read_string() !string {
+ 	// bytestr copies, so the view never escapes
+-	return d.read_view()!.bytestr()
++	value := d.read_view()!.bytestr()
++	if !utf8.validate_str(value) { return error('protobuf string is not valid UTF-8') }
++	return value
+ }
+ 
+ // int32/int64 arrive sign-extended to 64 bits; truncation restores them. The
+@@ -178,8 +182,29 @@
+ 	return math.f64_from_bits(d.read_fixed64()!)
+ }
+ 
+-pub fn (mut d Decoder) skip(wt WireType) ! {
++pub fn (mut d Decoder) skip(wt WireType) ! { d.skip_at_depth(wt, 0)! }
++
++pub fn (mut d Decoder) skip_at_depth(wt WireType, depth int) ! {
++	if depth < 0 || depth >= 100 { return error('protobuf skip recursion limit exceeded') }
+ 	match wt {
++		.start_group {
++			if d.last_field == 0 {
++				return error('protobuf group recursion limit exceeded')
++			}
++			start_field := d.last_field
++			for d.more() {
++				field, child_wire := d.read_tag()!
++				if child_wire == .end_group {
++					if field != start_field {
++						return error('protobuf group end tag does not match start')
++					}
++					return
++				}
++				d.skip_at_depth(child_wire, depth + 1)!
++			}
++			return error('unterminated protobuf group')
++		}
++		.end_group { return error('unexpected protobuf group end') }
+ 		.varint {
+ 			_ := d.read_varint()!
+ 		}
+--- a/gen/codegen.v
++++ b/gen/codegen.v
+@@ -82,10 +82,10 @@
+ }
+ 
+ const v_keywords = ['as', 'asm', 'assert', 'atomic', 'break', 'const', 'continue', 'defer', 'dump',
+-	'else', 'enum', 'false', 'fn', 'for', 'go', 'goto', 'if', 'implements', 'import', 'in',
+-	'interface', 'is', 'isreftype', 'lock', 'match', 'module', 'mut', 'none', 'or', 'pub', 'return',
+-	'rlock', 'select', 'shared', 'sizeof', 'spawn', 'static', 'struct', 'true', 'type', 'typeof',
+-	'union', 'unsafe', 'volatile']
++	'else', 'enum', 'false', 'fn', 'for', 'go', 'goto', 'if', 'implements', 'import', 'in', 'interface',
++	'is', 'isreftype', 'lock', 'match', 'module', 'mut', 'none', 'or', 'pub', 'return', 'rlock',
++	'select', 'shared', 'sizeof', 'spawn', 'static', 'struct', 'true', 'type', 'typeof', 'union',
++	'unsafe', 'volatile']
+ 
+ // V struct field names must be lowercase (V rejects uppercase in field names),
+ // so identifiers are lowercased. JSON names derive from the original proto name
+@@ -353,7 +353,7 @@
+ // arm per message in the fileset. `wrapped` = value-wrapped WKT form.
+ fn (mut g Gen) emit_any_json_resolver(mut b strings.Builder) {
+ 	b.writeln('')
+-	b.writeln('fn pb_any_to_json(pb_name string, pb_value []u8) !(json2.Any, bool) {')
++	b.writeln('fn pb_any_to_json(pb_name string, pb_value []u8) !(protobuf.JsonValue, bool) {')
+ 	b.writeln('\tmatch pb_name {')
+ 	for vname, loc in g.locs {
+ 		full := g.loc_full_name(loc)
+@@ -366,19 +366,19 @@
+ 	b.writeln('\t}')
+ 	b.writeln('}')
+ 	b.writeln('')
+-	b.writeln('fn pb_any_from_json(pb_name string, pb_obj map[string]json2.Any) ![]u8 {')
++	b.writeln('fn pb_any_from_json(pb_name string, pb_obj map[string]protobuf.JsonValue) ![]u8 {')
+ 	b.writeln('\tmatch pb_name {')
+ 	for vname, loc in g.locs {
+ 		full := g.loc_full_name(loc)
+ 		wrapped := loc.pkg_str == 'google.protobuf' && wkt_value_wrapped(loc.msg.name)
+ 		b.writeln("\t\t'${full}' {")
+ 		if wrapped {
+-			b.writeln("\t\t\tpb_v := pb_obj['value'] or { return error('protojson: Any of ${full} missing \"value\"') }")
++			b.writeln('\t\t\tpb_v := pb_obj[\'value\'] or { return error(\'protojson: Any of ${full} missing "value"\') }')
+ 			b.writeln('\t\t\treturn ${vname}.from_json_value(pb_v)!.encode()')
+ 		} else {
+ 			b.writeln('\t\t\tmut pb_inner := pb_obj.clone()')
+ 			b.writeln("\t\t\tpb_inner.delete('@type')")
+-			b.writeln('\t\t\treturn ${vname}.from_json_value(json2.Any(pb_inner))!.encode()')
++			b.writeln('\t\t\treturn ${vname}.from_json_value(protobuf.JsonValue(pb_inner))!.encode()')
+ 		}
+ 		b.writeln('\t\t}')
+ 	}
+@@ -754,6 +754,11 @@
+ 
+ 	b.writeln('')
+ 	b.writeln('pub fn ${vname}.decode(buf []u8) !${vname} {')
++	b.writeln('\treturn ${vname}.decode_at_depth(buf, 0)')
++	b.writeln('}')
++	b.writeln('')
++	b.writeln('fn ${vname}.decode_at_depth(buf []u8, depth int) !${vname} {')
++	b.writeln('\tif depth > 100 { return error("protobuf recursion limit exceeded") }')
+ 	b.writeln('\tmut m := ${vname}{}')
+ 	b.writeln('\tmut d := protobuf.Decoder{')
+ 	b.writeln('\t\tbuf: buf')
+@@ -762,7 +767,7 @@
+ 	if fields.len == 0 {
+ 		b.writeln('\t\ttag_start := d.pos')
+ 		b.writeln('\t\t_, wt := d.read_tag()!')
+-		b.writeln('\t\td.skip(wt)!')
++		b.writeln('\t\td.skip_at_depth(wt, depth)!')
+ 		b.writeln('\t\tm.pb_unknown << d.buf[tag_start..d.pos]')
+ 	} else {
+ 		b.writeln('\t\ttag_start := d.pos')
+@@ -772,7 +777,7 @@
+ 			g.emit_decode_field(mut b, scope, vname, fld)!
+ 		}
+ 		b.writeln('\t\t\telse {')
+-		b.writeln('\t\t\t\td.skip(wt)!')
++		b.writeln('\t\t\t\td.skip_at_depth(wt, depth)!')
+ 		b.writeln('\t\t\t\tm.pb_unknown << d.buf[tag_start..d.pos]')
+ 		b.writeln('\t\t\t}')
+ 		b.writeln('\t\t}')
+@@ -899,12 +904,12 @@
+ 
+ // A one-member V type alias is not a sum type, so it cannot use `is`.
+ fn (g &Gen) oneof_condition(vname string, fld Field, value string) string {
+-    loc := g.locs[vname] or { panic('missing message location: ${vname}') }
+-    members := loc.msg.fields.filter(it.oneof == fld.oneof)
+-    if members.len == 1 {
+-        return 'true'
+-    }
+-    return '${value} is ${vname}_${camel(fld.name)}_Case'
++	loc := g.locs[vname] or { panic('missing message location: ${vname}') }
++	members := loc.msg.fields.filter(it.oneof == fld.oneof)
++	if members.len == 1 {
++		return 'true'
++	}
++	return '${value} is ${vname}_${camel(fld.name)}_Case'
+ }
+ 
+ fn (mut g Gen) emit_encode_field(mut b strings.Builder, scope []string, vname string, fld Field) ! {
+@@ -915,7 +920,9 @@
+ 		arm_write := match info.kind {
+ 			.scalar { 'e.${tagged_writer(fld.typ)}(${n}, ov.value)' }
+ 			.enum_ { 'e.write_int32_field(${n}, int(ov.value))' }
+-			.message { 'e.write_tag(${n}, .len_delim)\n\t\t\te.write_varint(u64(ov.value.encoded_size()))\n\t\t\tov.value.encode_to(mut e)' }
++			.message {
++				'e.write_tag(${n}, .len_delim)\n\t\t\te.write_varint(u64(ov.value.encoded_size()))\n\t\t\tov.value.encode_to(mut e)'
++			}
+ 		}
+ 		b.writeln('\tif ov := m.${sanitize(fld.oneof)} {')
+ 		b.writeln('\t\tif ${g.oneof_condition(vname, fld, 'ov')} {')
+@@ -928,7 +935,9 @@
+ 		val_write := match info.kind {
+ 			.scalar { 'e.${tagged_writer(fld.typ)}(2, v)' }
+ 			.enum_ { 'e.write_int32_field(2, int(v))' }
+-			.message { 'e.write_tag(2, .len_delim)\n\t\t\te.write_varint(u64(v.encoded_size()))\n\t\t\tv.encode_to(mut e)' }
++			.message {
++				'e.write_tag(2, .len_delim)\n\t\t\te.write_varint(u64(v.encoded_size()))\n\t\t\tv.encode_to(mut e)'
++			}
+ 		}
+ 		b.writeln('\tif m.${name}.len > 0 {')
+ 		b.writeln('\t\tmut ${name}_keys := m.${name}.keys()')
+@@ -1042,7 +1051,9 @@
+ 	if fld.oneof != '' {
+ 		arm_size := match info.kind {
+ 			.scalar { scalar_size_expr(fld.typ, n, 'ov.value') }
+-			.enum_ { 'protobuf.tag_len(${n}) + protobuf.varint_len(protobuf.int32_wire(int(ov.value)))' }
++			.enum_ {
++				'protobuf.tag_len(${n}) + protobuf.varint_len(protobuf.int32_wire(int(ov.value)))'
++			}
+ 			.message { 'protobuf.len_field_len(${n}, ov.value.encoded_size())' }
+ 		}
+ 		b.writeln('\tif ov := m.${sanitize(fld.oneof)} {')
+@@ -1140,10 +1151,32 @@
+ 	}
+ }
+ 
++fn scalar_wire_kind(typ string) string {
++	return match typ {
++		'fixed32', 'sfixed32', 'float' { '.fixed32' }
++		'fixed64', 'sfixed64', 'double' { '.fixed64' }
++		'string', 'bytes' { '.len_delim' }
++		else { '.varint' }
++	}
++}
++
+ fn (mut g Gen) emit_decode_field(mut b strings.Builder, scope []string, vname string, fld Field) ! {
+ 	info := g.field_info(scope, vname, fld)!
+ 	name := sanitize(fld.name)
+ 	n := fld.number
++	wire := if fld.is_map || info.kind == .message {
++		'.len_delim'
++	} else if info.kind == .enum_ {
++		'.varint'
++	} else {
++		scalar_wire_kind(fld.typ)
++	}
++	packed := !fld.is_map && fld.label == .repeated && (is_packable(fld.typ) || info.kind == .enum_)
++	wire_condition := if packed {
++		'wt != ' + wire + ' && wt != .len_delim'
++	} else {
++		'wt != ' + wire
++	}
+ 	if fld.oneof != '' {
+ 		of := sanitize(fld.oneof)
+ 		arm := '${vname}_${camel(fld.name)}_Case'
+@@ -1151,6 +1184,7 @@
+ 			// a message oneof arm merges with a prior value of the SAME arm;
+ 			// a different prior arm is replaced (merge with empty = the new one)
+ 			b.writeln('\t\t\t${n} {')
++			b.writeln('\t\t\t\tif ${wire_condition} { return error("wrong wire type for field ${n}") }')
+ 			b.writeln('\t\t\t\tmv_${name} := d.read_view()!')
+ 			b.writeln('\t\t\t\tmut mb_${name} := []u8{}')
+ 			b.writeln('\t\t\t\tif cur := m.${of} {')
+@@ -1160,12 +1194,12 @@
+ 			b.writeln('\t\t\t\t}')
+ 			b.writeln('\t\t\t\tmb_${name} << mv_${name}')
+ 			if g.is_boxed(scope, fld.number) {
+-				b.writeln('\t\t\t\tbox_${name} := ${info.vtype}.decode(mb_${name})!')
++				b.writeln('\t\t\t\tbox_${name} := ${info.vtype}.decode_at_depth(mb_${name}, depth + 1)!')
+ 				b.writeln('\t\t\t\tm.${of} = ${arm}{')
+ 				b.writeln('\t\t\t\t\tvalue: &box_${name}')
+ 			} else {
+ 				b.writeln('\t\t\t\tm.${of} = ${arm}{')
+-				b.writeln('\t\t\t\t\tvalue: ${info.vtype}.decode(mb_${name})!')
++				b.writeln('\t\t\t\t\tvalue: ${info.vtype}.decode_at_depth(mb_${name}, depth + 1)!')
+ 			}
+ 			b.writeln('\t\t\t\t}')
+ 			b.writeln('\t\t\t}')
+@@ -1177,6 +1211,7 @@
+ 			.message { '' }
+ 		}
+ 		b.writeln('\t\t\t${n} {')
++		b.writeln('\t\t\t\tif ${wire_condition} { return error("wrong wire type for field ${n}") }')
+ 		b.writeln('\t\t\t\tm.${of} = ${arm}{')
+ 		b.writeln('\t\t\t\t\tvalue: ${arm_read}')
+ 		b.writeln('\t\t\t\t}')
+@@ -1192,11 +1227,13 @@
+ 		val_read := match info.kind {
+ 			.scalar { 'sub.${scalar_reader(fld.typ)}()!' }
+ 			.enum_ { 'unsafe { ${info.vtype}(sub.read_int32()!) }' }
+-			.message { '${info.vtype}.decode(sub.read_view()!)!' }
++			.message { '${info.vtype}.decode_at_depth(sub.read_view()!, depth + 2)!' }
+ 		}
+ 		// missing key or value fields fall back to zero values; last entry
+ 		// wins on duplicate keys, both per the proto3 spec
+ 		b.writeln('\t\t\t${n} {')
++		b.writeln('\t\t\t\tif ${wire_condition} { return error("wrong wire type for field ${n}") }')
++		b.writeln('\t\t\t\tif depth >= 100 { return error("protobuf recursion limit exceeded") }')
+ 		b.writeln('\t\t\t\tmut sub := protobuf.Decoder{')
+ 		b.writeln('\t\t\t\t\tbuf: d.read_view()!')
+ 		b.writeln('\t\t\t\t}')
+@@ -1205,9 +1242,16 @@
+ 		b.writeln('\t\t\t\tfor sub.more() {')
+ 		b.writeln('\t\t\t\t\tmf, mw := sub.read_tag()!')
+ 		b.writeln('\t\t\t\t\tmatch mf {')
+-		b.writeln('\t\t\t\t\t\t1 { mk = ${map_key_read(fld.key_typ)} }')
+-		b.writeln('\t\t\t\t\t\t2 { mv = ${val_read} }')
+-		b.writeln('\t\t\t\t\t\telse { sub.skip(mw)! }')
++		b.writeln('\t\t\t\t\t\t1 { if mw != ${scalar_wire_kind(fld.key_typ)} {return error("wrong map key wire type")} mk = ${map_key_read(fld.key_typ)} }')
++		value_wire := if info.kind == .message {
++			'.len_delim'
++		} else if info.kind == .enum_ {
++			'.varint'
++		} else {
++			scalar_wire_kind(fld.typ)
++		}
++		b.writeln('\t\t\t\t\t\t2 { if mw != ${value_wire} {return error("wrong map value wire type")} mv = ${val_read} }')
++		b.writeln('\t\t\t\t\t\telse { sub.skip_at_depth(mw, depth + 1)! }')
+ 		b.writeln('\t\t\t\t\t}')
+ 		b.writeln('\t\t\t\t}')
+ 		b.writeln('\t\t\t\tm.${name}[mk] = mv')
+@@ -1217,7 +1261,8 @@
+ 	if fld.label == .repeated {
+ 		if info.kind == .message {
+ 			b.writeln('\t\t\t${n} {')
+-			b.writeln('\t\t\t\tm.${name} << ${info.vtype}.decode(d.read_view()!)!')
++			b.writeln('\t\t\t\tif ${wire_condition} { return error("wrong wire type for field ${n}") }')
++			b.writeln('\t\t\t\tm.${name} << ${info.vtype}.decode_at_depth(d.read_view()!, depth + 1)!')
+ 			b.writeln('\t\t\t}')
+ 			return
+ 		}
+@@ -1234,6 +1279,7 @@
+ 				'sub.${scalar_reader(fld.typ)}()!'
+ 			}
+ 			b.writeln('\t\t\t${n} {')
++			b.writeln('\t\t\t\tif ${wire_condition} { return error("wrong wire type for field ${n}") }')
+ 			b.writeln('\t\t\t\tif wt == .len_delim {')
+ 			b.writeln('\t\t\t\t\tmut sub := protobuf.Decoder{')
+ 			b.writeln('\t\t\t\t\t\tbuf: d.read_view()!')
+@@ -1247,12 +1293,14 @@
+ 			b.writeln('\t\t\t}')
+ 		} else {
+ 			b.writeln('\t\t\t${n} {')
++			b.writeln('\t\t\t\tif ${wire_condition} { return error("wrong wire type for field ${n}") }')
+ 			b.writeln('\t\t\t\tm.${name} << ${elem_d}')
+ 			b.writeln('\t\t\t}')
+ 		}
+ 		return
+ 	}
+ 	b.writeln('\t\t\t${n} {')
++	b.writeln('\t\t\t\tif ${wire_condition} { return error("wrong wire type for field ${n}") }')
+ 	match info.kind {
+ 		.message {
+ 			// proto3 merges repeated occurrences of a message field; decoding
+@@ -1264,10 +1312,10 @@
+ 			b.writeln('\t\t\t\t}')
+ 			b.writeln('\t\t\t\tmb_${name} << mv_${name}')
+ 			if g.is_boxed(scope, fld.number) {
+-				b.writeln('\t\t\t\tbox_${name} := ${info.vtype}.decode(mb_${name})!')
++				b.writeln('\t\t\t\tbox_${name} := ${info.vtype}.decode_at_depth(mb_${name}, depth + 1)!')
+ 				b.writeln('\t\t\t\tm.${name} = &box_${name}')
+ 			} else {
+-				b.writeln('\t\t\t\tm.${name} = ${info.vtype}.decode(mb_${name})!')
++				b.writeln('\t\t\t\tm.${name} = ${info.vtype}.decode_at_depth(mb_${name}, depth + 1)!')
+ 			}
+ 		}
+ 		.enum_ {
+--- a/gen/codegen_test.v
++++ b/gen/codegen_test.v
+@@ -84,7 +84,7 @@
+ 			'f': false
+ 		}
+ 		// zero-valued arm: oneof presence must survive the roundtrip
+-		contact:  Person_Handle{}
++		contact:  Person_Handle_Case{}
+ 	}
+ 	enc := p.encode()
+ 	q := Person.decode(enc) or { panic(err) }
+@@ -108,7 +108,7 @@
+ 	assert r.contact == none
+ 	// concatenated messages merge, so the last oneof arm on the wire wins
+ 	mut p3 := Person{
+-		contact: Person_Extra{
++		contact: Person_Extra_Case{
+ 			value: Person_Address{
+ 				street: 's'
+ 			}
+@@ -116,13 +116,13 @@
+ 	}
+ 	mut wire := p3.encode()
+ 	wire << Person{
+-		contact: Person_Ext{
++		contact: Person_Ext_Case{
+ 			value: 7
+ 		}
+ 	}.encode()
+ 	q3 := Person.decode(wire) or { panic(err) }
+ 	if c := q3.contact {
+-		assert c is Person_Ext
++		assert c is Person_Ext_Case
+ 	} else {
+ 		panic('oneof arm lost in merge')
+ 	}
+@@ -149,8 +149,8 @@
+ 	assert code.contains('places map[int]Person_Address')
+ 	assert code.contains('kinds map[u64]PersonKind')
+ 	assert code.contains('flags map[string]bool')
+-	assert code.contains('pub struct Person_Handle {')
+-	assert code.contains('pub type Person_Contact = Person_Handle | Person_Extra | Person_Ext')
++	assert code.contains('pub struct Person_Handle_Case {')
++	assert code.contains('pub type Person_Contact = Person_Handle_Case | Person_Extra_Case | Person_Ext_Case')
+ 	assert code.contains('contact ?Person_Contact')
+ }
+ 
+@@ -179,7 +179,7 @@
+ 	os.write_file(os.join_path(dir, 'demo_pb.v'), code)!
+ 	os.write_file(os.join_path(dir, 'main.v'), harness_src)!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(dir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(dir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('ROUNDTRIP OK'), res.output
+ }
+@@ -243,7 +243,7 @@
+ 	println('UNKNOWN OK')
+ }")!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(dir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(dir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('UNKNOWN OK'), res.output
+ }
+@@ -277,7 +277,7 @@
+ 	println('QUAL OK')
+ }")!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(dir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(dir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('QUAL OK'), res.output
+ }
+@@ -330,20 +330,20 @@
+ 	println(\'BOOLMAP OK\')
+ }')!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(dir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(dir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('BOOLMAP OK'), res.output
+ }
+ 
+-fn test_deprecated_field_annotation() ! {
++fn test_deprecated_wire_fields_without_build_warnings() ! {
+ 	f := parse('syntax = "proto3"; message M {
+ 	int32 keep = 1;
+ 	int32 old = 2 [deprecated = true];
+ 	repeated string old_list = 3 [deprecated = true];
+ }')!
+ 	code := generate(f, GenOpts{})!
+-	assert code.contains('old int @[deprecated]')
+-	assert code.contains('old_list []string @[deprecated]')
++	assert code.contains('old int // Deprecated by the protobuf schema.')
++	assert code.contains('old_list []string // Deprecated by the protobuf schema.')
+ 	// non-deprecated fields stay clean
+ 	assert code.contains('keep int\n') || code.contains('\tkeep int\n')
+ 	assert !code.contains('keep int @[deprecated]')
+@@ -403,7 +403,7 @@
+ 	println('MANGLE OK')
+ }")!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(dir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(dir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('MANGLE OK'), res.output
+ }
+@@ -488,7 +488,7 @@
+ 	println('REC OK')
+ }")!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(dir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(dir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('REC OK'), res.output
+ }
+@@ -512,10 +512,10 @@
+ fn main() {
+ 	n := Node{
+ 		val:  1
+-		next: Node_Child{
++		next: Node_Child_Case{
+ 			value: &Node{
+ 				val:  2
+-				next: Node_Stop{
++				next: Node_Stop_Case{
+ 					value: false
+ 				}
+ 			}
+@@ -526,7 +526,7 @@
+ 	println('REC OK')
+ }")!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(dir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(dir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('REC OK'), res.output
+ }
+--- a/gen/json.v
++++ b/gen/json.v
+@@ -8,7 +8,7 @@
+ // the spec: lowerCamelCase names (original names also accepted on parse),
+ // 64-bit ints as strings, bytes as base64, defaults omitted except
+ // presence fields, and special forms for the well-known types. Unknown
+-// JSON fields are ignored on parse; pb_unknown does not survive JSON.
++// JSON fields are rejected on parse; pb_unknown does not survive JSON.
+ 
+ // default lowerCamelCase JSON name derived from a proto field name
+ // protobuf's ToJsonName: drop each underscore and uppercase the letter that
+@@ -71,12 +71,12 @@
+ 
+ fn json_scalar_emit(t string, ve string) string {
+ 	return match t {
+-		'int32', 'sint32', 'sfixed32' { 'json2.Any(i64(i32(${ve})))' }
++		'int32', 'sint32', 'sfixed32' { 'protobuf.JsonValue(i64(i32(${ve})))' }
+ 		'int64', 'sint64', 'sfixed64' { 'protobuf.json_i64(${ve})' }
+-		'uint32', 'fixed32' { 'json2.Any(u64(${ve}))' }
++		'uint32', 'fixed32' { 'protobuf.JsonValue(u64(${ve}))' }
+ 		'uint64', 'fixed64' { 'protobuf.json_u64(${ve})' }
+-		'bool' { 'json2.Any(${ve})' }
+-		'string' { 'json2.Any(${ve})' }
++		'bool' { 'protobuf.JsonValue(${ve})' }
++		'string' { 'protobuf.JsonValue(${ve})' }
+ 		'bytes' { 'protobuf.json_b64(${ve})' }
+ 		'float' { 'protobuf.json_f32(${ve})' }
+ 		'double' { 'protobuf.json_f64(${ve})' }
+@@ -117,7 +117,7 @@
+ 
+ fn (mut g Gen) emit_enum_json(mut b strings.Builder, vname string, e Enum) {
+ 	b.writeln('')
+-	b.writeln('fn ${vname.to_lower()}_to_json(v ${vname}) json2.Any {')
++	b.writeln('fn ${vname.to_lower()}_to_json(v ${vname}) protobuf.JsonValue {')
+ 	b.writeln('\treturn match int(v) {')
+ 	// emit the canonical (first) name per number; aliases would duplicate arms
+ 	mut seen_out := map[int]bool{}
+@@ -126,13 +126,13 @@
+ 			continue
+ 		}
+ 		seen_out[val.number] = true
+-		b.writeln("\t\t${val.number} { json2.Any('${val.name}') }")
+-	}
+-	b.writeln('\t\telse { json2.Any(i64(i32(int(v)))) }')
++		b.writeln("\t\t${val.number} { protobuf.JsonValue('${val.name}') }")
++	}
++	b.writeln('\t\telse { protobuf.JsonValue(i64(i32(int(v)))) }')
+ 	b.writeln('\t}')
+ 	b.writeln('}')
+ 	b.writeln('')
+-	b.writeln('fn ${vname.to_lower()}_from_json(a json2.Any) !${vname} {')
++	b.writeln('fn ${vname.to_lower()}_from_json(a protobuf.JsonValue) !${vname} {')
+ 	b.writeln('\tif a is string {')
+ 	b.writeln('\t\tmatch a {')
+ 	// every name (including aliases) parses back to its number
+@@ -182,32 +182,34 @@
+ 	}
+ 
+ 	b.writeln('')
+-	b.writeln('pub fn (m &${vname}) json_value() !json2.Any {')
++	b.writeln('pub fn (m &${vname}) json_value() !protobuf.JsonValue {')
+ 	if m.fields.len == 0 {
+-		b.writeln('\treturn json2.Any(map[string]json2.Any{})')
++		b.writeln('\treturn protobuf.JsonValue(map[string]protobuf.JsonValue{})')
+ 	} else {
+-		b.writeln('\tmut o := map[string]json2.Any{}')
++		b.writeln('\tmut o := map[string]protobuf.JsonValue{}')
+ 		for fld in m.fields {
+ 			g.emit_json_field_out(mut b, scope, vname, fld)!
+ 		}
+-		b.writeln('\treturn json2.Any(o)')
++		b.writeln('\treturn protobuf.JsonValue(o)')
+ 	}
+ 	b.writeln('}')
+ 
+ 	b.writeln('')
+-	b.writeln('pub fn ${vname}.from_json_value(a json2.Any) !${vname} {')
++	b.writeln('pub fn ${vname}.from_json_value(a protobuf.JsonValue) !${vname} {')
+ 	if m.fields.len == 0 {
+-		b.writeln('\t_ := protobuf.json_object(a)!')
++		b.writeln('\tobj := protobuf.json_object(a)!')
++		b.writeln("\tif obj.len != 0 { return error('protojson: unknown field') }")
+ 		b.writeln('\treturn ${vname}{}')
+ 	} else {
+ 		b.writeln('\tobj := protobuf.json_object(a)!')
+ 		b.writeln('\tmut m := ${vname}{}')
++		b.writeln('\tmut seen := map[int]bool{}')
+ 		b.writeln('\tfor jk, jv in obj {')
+ 		b.writeln('\t\tmatch jk {')
+ 		for fld in m.fields {
+ 			g.emit_json_field_in(mut b, scope, vname, fld)!
+ 		}
+-		b.writeln('\t\t\telse {}')
++		b.writeln("\t\t\telse { return error('protojson: unknown field `\${jk}`') }")
+ 		b.writeln('\t\t}')
+ 		b.writeln('\t}')
+ 		b.writeln('\treturn m')
+@@ -229,25 +231,24 @@
+ 	}
+ 	if fld.is_map {
+ 		b.writeln('\tif m.${name}.len > 0 {')
+-		b.writeln('\t\tmut ${name}_o := map[string]json2.Any{}')
++		b.writeln('\t\tmut ${name}_o := map[string]protobuf.JsonValue{}')
+ 		b.writeln('\t\tmut ${name}_ks := m.${name}.keys()')
+ 		b.writeln('\t\t${name}_ks.sort()')
+ 		b.writeln('\t\tfor k in ${name}_ks {')
+ 		b.writeln('\t\t\tv := m.${name}[k]')
+-		b.writeln('\t\t\t${name}_o[${json_map_key_emit(fld.key_typ)}] = ${g.json_field_emit(info,
+-			fld, 'v')}')
++		b.writeln('\t\t\t${name}_o[${json_map_key_emit(fld.key_typ)}] = ${g.json_field_emit(info, fld, 'v')}')
+ 		b.writeln('\t\t}')
+-		b.writeln("\t\to['${jn}'] = json2.Any(${name}_o)")
++		b.writeln("\t\to['${jn}'] = protobuf.JsonValue(${name}_o)")
+ 		b.writeln('\t}')
+ 		return
+ 	}
+ 	if fld.label == .repeated {
+ 		b.writeln('\tif m.${name}.len > 0 {')
+-		b.writeln('\t\tmut ${name}_a := []json2.Any{cap: m.${name}.len}')
++		b.writeln('\t\tmut ${name}_a := []protobuf.JsonValue{cap: m.${name}.len}')
+ 		b.writeln('\t\tfor v in m.${name} {')
+ 		b.writeln('\t\t\t${name}_a << ${g.json_field_emit(info, fld, 'v')}')
+ 		b.writeln('\t\t}')
+-		b.writeln("\t\to['${jn}'] = json2.Any(${name}_a)")
++		b.writeln("\t\to['${jn}'] = protobuf.JsonValue(${name}_a)")
+ 		b.writeln('\t}')
+ 		return
+ 	}
+@@ -272,6 +273,8 @@
+ 	name := sanitize(fld.name)
+ 	pattern := field_json_key_pattern(fld)
+ 	b.writeln('\t\t\t${pattern} {')
++	b.writeln("\t\t\t\tif seen[${fld.number}] { return error('protojson: duplicate field ${fld.name}') }")
++	b.writeln('\t\t\t\tseen[${fld.number}] = true')
+ 	// JSON null means "leave at default" for every field EXCEPT a singular
+ 	// google.protobuf.Value, where null is a legitimate value (NullValue)
+ 	value_vn := g.vname_for('google.protobuf', [], 'Value')
+@@ -296,8 +299,7 @@
+ 		b.writeln('\t\t\t\t}')
+ 	} else if fld.is_map {
+ 		b.writeln('\t\t\t\tfor mk, mv in protobuf.json_object(jv)! {')
+-		b.writeln('\t\t\t\t\tm.${name}[${json_map_key_parse(fld.key_typ)}] = ${g.json_field_parse(info,
+-			fld, 'mv')}')
++		b.writeln('\t\t\t\t\tm.${name}[${json_map_key_parse(fld.key_typ)}] = ${g.json_field_parse(info, fld, 'mv')}')
+ 		b.writeln('\t\t\t\t}')
+ 	} else if fld.label == .repeated {
+ 		b.writeln('\t\t\t\tfor it in protobuf.json_array(jv)! {')
+@@ -335,34 +337,29 @@
+ 			b.writeln('')
+ 			b.writeln('// canonical JSON: {"@type": url, ...fields} for normal messages,')
+ 			b.writeln('// {"@type": url, "value": <form>} for value-wrapped WKTs. Uses the')
+-			b.writeln('// generated fileset resolver; unresolvable types degrade to a raw')
+-			b.writeln('// base64 form rather than erroring (json_value cannot fail).')
+-			b.writeln('pub fn (m &${vname}) json_value() !json2.Any {')
++			b.writeln('// generated fileset resolver; invalid or unresolvable types fail.')
++			b.writeln('pub fn (m &${vname}) json_value() !protobuf.JsonValue {')
+ 			b.writeln("\tif m.type_url == '' {")
+-			b.writeln('\t\treturn json2.Any(map[string]json2.Any{})')
++			b.writeln("\t\tif m.value.len > 0 { return error('protojson: Any value requires type_url') }")
++			b.writeln('\t\treturn protobuf.JsonValue(map[string]protobuf.JsonValue{})')
+ 			b.writeln('\t}')
+ 			b.writeln("\tname := m.type_url.all_after_last('/')")
+-			b.writeln('\tinner, wrapped := pb_any_to_json(name, m.value) or {')
+-			b.writeln('\t\tmut raw := map[string]json2.Any{}')
+-			b.writeln("\t\traw['@type'] = json2.Any(m.type_url)")
+-			b.writeln("\t\traw['value'] = protobuf.json_b64(m.value)")
+-			b.writeln('\t\treturn json2.Any(raw)')
+-			b.writeln('\t}')
+-			b.writeln('\tmut o := map[string]json2.Any{}')
+-			b.writeln("\to['@type'] = json2.Any(m.type_url)")
++			b.writeln('\tinner, wrapped := pb_any_to_json(name, m.value)!')
++			b.writeln('\tmut o := map[string]protobuf.JsonValue{}')
++			b.writeln("\to['@type'] = protobuf.JsonValue(m.type_url)")
+ 			b.writeln('\tif wrapped {')
+ 			b.writeln("\t\to['value'] = inner")
+-			b.writeln('\t} else if inner is map[string]json2.Any {')
++			b.writeln('\t} else if inner is map[string]protobuf.JsonValue {')
+ 			b.writeln('\t\tfor k, v in inner {')
+ 			b.writeln('\t\t\to[k] = v')
+ 			b.writeln('\t\t}')
+ 			b.writeln('\t} else {')
+ 			b.writeln("\t\to['value'] = inner")
+ 			b.writeln('\t}')
+-			b.writeln('\treturn json2.Any(o)')
+-			b.writeln('}')
+-			b.writeln('')
+-			b.writeln('pub fn ${vname}.from_json_value(a json2.Any) !${vname} {')
++			b.writeln('\treturn protobuf.JsonValue(o)')
++			b.writeln('}')
++			b.writeln('')
++			b.writeln('pub fn ${vname}.from_json_value(a protobuf.JsonValue) !${vname} {')
+ 			b.writeln('\tobj := protobuf.json_object(a)!')
+ 			b.writeln('\tif obj.len == 0 {')
+ 			b.writeln('\t\treturn ${vname}{}')
+@@ -380,7 +377,7 @@
+ 		'Timestamp' {
+ 			b.writeln('')
+ 			b.writeln('// canonical JSON form: RFC 3339 in UTC')
+-			b.writeln('pub fn (m &${vname}) json_value() !json2.Any {')
++			b.writeln('pub fn (m &${vname}) json_value() !protobuf.JsonValue {')
+ 			b.writeln('\t// protojson range: 0001-01-01T00:00:00Z .. 9999-12-31T23:59:59.999999999Z')
+ 			b.writeln('\tif m.seconds < -62135596800 || m.seconds > 253402300799 || m.nanos < 0 || m.nanos > 999999999 {')
+ 			b.writeln("\t\treturn error('protojson: timestamp out of range')")
+@@ -396,10 +393,10 @@
+ 			b.writeln("\t\t\tfrac = '.\${m.nanos:09d}'")
+ 			b.writeln('\t\t}')
+ 			b.writeln('\t}')
+-			b.writeln("\treturn json2.Any('\${t.year:04d}-\${t.month:02d}-\${t.day:02d}T\${t.hour:02d}:\${t.minute:02d}:\${t.second:02d}\${frac}Z')")
+-			b.writeln('}')
+-			b.writeln('')
+-			b.writeln('pub fn ${vname}.from_json_value(a json2.Any) !${vname} {')
++			b.writeln("\treturn protobuf.JsonValue('\${t.year:04d}-\${t.month:02d}-\${t.day:02d}T\${t.hour:02d}:\${t.minute:02d}:\${t.second:02d}\${frac}Z')")
++			b.writeln('}')
++			b.writeln('')
++			b.writeln('pub fn ${vname}.from_json_value(a protobuf.JsonValue) !${vname} {')
+ 			b.writeln('\ts := protobuf.json_stringv(a)!')
+ 			b.writeln('\tsecs, nanos := protobuf.parse_timestamp_rfc3339(s)!')
+ 			b.writeln('\treturn ${vname}{')
+@@ -411,7 +408,7 @@
+ 		'Duration' {
+ 			b.writeln('')
+ 			b.writeln('// canonical JSON form: decimal seconds with an s suffix')
+-			b.writeln('pub fn (m &${vname}) json_value() !json2.Any {')
++			b.writeln('pub fn (m &${vname}) json_value() !protobuf.JsonValue {')
+ 			b.writeln('\t// protojson range: |seconds| <= 315576000000, matching-sign nanos')
+ 			b.writeln('\tif m.seconds < -315576000000 || m.seconds > 315576000000 || m.nanos < -999999999 || m.nanos > 999999999 {')
+ 			b.writeln("\t\treturn error('protojson: duration out of range')")
+@@ -439,35 +436,11 @@
+ 			b.writeln('\t\t}')
+ 			b.writeln('\t}')
+ 			b.writeln("\tsign := if neg { '-' } else { '' }")
+-			b.writeln("\treturn json2.Any('\${sign}\${s}\${frac}s')")
+-			b.writeln('}')
+-			b.writeln('')
+-			b.writeln('pub fn ${vname}.from_json_value(a json2.Any) !${vname} {')
+-			b.writeln('\tstr := protobuf.json_stringv(a)!')
+-			b.writeln("\tif !str.ends_with('s') || str.len < 2 {")
+-			b.writeln("\t\treturn error('protojson: bad duration `\${str}`')")
+-			b.writeln('\t}')
+-			b.writeln('\tmut body := str[..str.len - 1]')
+-			b.writeln("\tneg := body.starts_with('-')")
+-			b.writeln('\tif neg {')
+-			b.writeln('\t\tbody = body[1..]')
+-			b.writeln('\t}')
+-			b.writeln("\tparts := body.split('.')")
+-			b.writeln('\tif parts.len > 2 {')
+-			b.writeln("\t\treturn error('protojson: bad duration `\${str}`')")
+-			b.writeln('\t}')
+-			b.writeln('\tmut secs := protobuf.json_key_i64(parts[0])!')
+-			b.writeln('\tmut nanos := i64(0)')
+-			b.writeln('\tif parts.len == 2 {')
+-			b.writeln('\t\tif parts[1].len == 0 || parts[1].len > 9 {')
+-			b.writeln("\t\t\treturn error('protojson: bad duration `\${str}`')")
+-			b.writeln('\t\t}')
+-			b.writeln("\t\tnanos = protobuf.json_key_i64(parts[1] + '0'.repeat(9 - parts[1].len))!")
+-			b.writeln('\t}')
+-			b.writeln('\tif neg {')
+-			b.writeln('\t\tsecs = -secs')
+-			b.writeln('\t\tnanos = -nanos')
+-			b.writeln('\t}')
++			b.writeln("\treturn protobuf.JsonValue('\${sign}\${s}\${frac}s')")
++			b.writeln('}')
++			b.writeln('')
++			b.writeln('pub fn ${vname}.from_json_value(a protobuf.JsonValue) !${vname} {')
++			b.writeln('\tsecs, nanos := protobuf.json_duration_parts(protobuf.json_stringv(a)!)!')
+ 			b.writeln('\treturn ${vname}{')
+ 			b.writeln('\t\tseconds: secs')
+ 			b.writeln('\t\tnanos:   int(nanos)')
+@@ -477,17 +450,17 @@
+ 		'Struct' {
+ 			b.writeln('')
+ 			b.writeln('// canonical JSON form: a plain object')
+-			b.writeln('pub fn (m &${vname}) json_value() !json2.Any {')
+-			b.writeln('\tmut o := map[string]json2.Any{}')
++			b.writeln('pub fn (m &${vname}) json_value() !protobuf.JsonValue {')
++			b.writeln('\tmut o := map[string]protobuf.JsonValue{}')
+ 			b.writeln('\tmut ks := m.fields.keys()')
+ 			b.writeln('\tks.sort()')
+ 			b.writeln('\tfor k in ks {')
+ 			b.writeln('\t\to[k] = m.fields[k].json_value()!')
+ 			b.writeln('\t}')
+-			b.writeln('\treturn json2.Any(o)')
+-			b.writeln('}')
+-			b.writeln('')
+-			b.writeln('pub fn ${vname}.from_json_value(a json2.Any) !${vname} {')
++			b.writeln('\treturn protobuf.JsonValue(o)')
++			b.writeln('}')
++			b.writeln('')
++			b.writeln('pub fn ${vname}.from_json_value(a protobuf.JsonValue) !${vname} {')
+ 			b.writeln('\tmut m := ${vname}{}')
+ 			b.writeln('\tfor k, v in protobuf.json_object(a)! {')
+ 			b.writeln('\t\tm.fields[k] = ${value_v}.from_json_value(v)!')
+@@ -498,70 +471,70 @@
+ 		'Value' {
+ 			b.writeln('')
+ 			b.writeln('// canonical JSON form: the value itself')
+-			b.writeln('pub fn (m &${vname}) json_value() !json2.Any {')
++			b.writeln('pub fn (m &${vname}) json_value() !protobuf.JsonValue {')
+ 			b.writeln('\tif k := m.kind {')
+ 			b.writeln('\t\tmatch k {')
+-			b.writeln('\t\t\t${vname}_NullValue {')
+-			b.writeln('\t\t\t\treturn json2.Any(json2.Null{})')
+-			b.writeln('\t\t\t}')
+-			b.writeln('\t\t\t${vname}_NumberValue {')
+-			b.writeln('\t\t\t\treturn protobuf.json_f64(k.value)')
+-			b.writeln('\t\t\t}')
+-			b.writeln('\t\t\t${vname}_StringValue {')
+-			b.writeln('\t\t\t\treturn json2.Any(k.value)')
+-			b.writeln('\t\t\t}')
+-			b.writeln('\t\t\t${vname}_BoolValue {')
+-			b.writeln('\t\t\t\treturn json2.Any(k.value)')
+-			b.writeln('\t\t\t}')
+-			b.writeln('\t\t\t${vname}_StructValue {')
++			b.writeln('\t\t\t${vname}_NullValue_Case {')
++			b.writeln('\t\t\t\treturn protobuf.JsonValue(json2.Null{})')
++			b.writeln('\t\t\t}')
++			b.writeln('\t\t\t${vname}_NumberValue_Case {')
++			b.writeln('\t\t\t\treturn protobuf.json_value_number(k.value)!')
++			b.writeln('\t\t\t}')
++			b.writeln('\t\t\t${vname}_StringValue_Case {')
++			b.writeln('\t\t\t\treturn protobuf.JsonValue(k.value)')
++			b.writeln('\t\t\t}')
++			b.writeln('\t\t\t${vname}_BoolValue_Case {')
++			b.writeln('\t\t\t\treturn protobuf.JsonValue(k.value)')
++			b.writeln('\t\t\t}')
++			b.writeln('\t\t\t${vname}_StructValue_Case {')
+ 			b.writeln('\t\t\t\treturn k.value.json_value()!')
+ 			b.writeln('\t\t\t}')
+-			b.writeln('\t\t\t${vname}_ListValue {')
++			b.writeln('\t\t\t${vname}_ListValue_Case {')
+ 			b.writeln('\t\t\t\treturn k.value.json_value()!')
+ 			b.writeln('\t\t\t}')
+ 			b.writeln('\t\t}')
+ 			b.writeln('\t}')
+-			b.writeln('\treturn json2.Any(json2.Null{})')
+-			b.writeln('}')
+-			b.writeln('')
+-			b.writeln('pub fn ${vname}.from_json_value(a json2.Any) !${vname} {')
++			b.writeln("\treturn error('protojson: Value kind is not set')")
++			b.writeln('}')
++			b.writeln('')
++			b.writeln('pub fn ${vname}.from_json_value(a protobuf.JsonValue) !${vname} {')
+ 			b.writeln('\tmatch a {')
+ 			b.writeln('\t\tjson2.Null {')
+ 			b.writeln('\t\t\treturn ${vname}{')
+-			b.writeln('\t\t\t\tkind: ${vname}_NullValue{}')
++			b.writeln('\t\t\t\tkind: ${vname}_NullValue_Case{}')
+ 			b.writeln('\t\t\t}')
+ 			b.writeln('\t\t}')
+ 			b.writeln('\t\tbool {')
+ 			b.writeln('\t\t\treturn ${vname}{')
+-			b.writeln('\t\t\t\tkind: ${vname}_BoolValue{')
++			b.writeln('\t\t\t\tkind: ${vname}_BoolValue_Case{')
+ 			b.writeln('\t\t\t\t\tvalue: a')
+ 			b.writeln('\t\t\t\t}')
+ 			b.writeln('\t\t\t}')
+ 			b.writeln('\t\t}')
+ 			b.writeln('\t\tstring {')
+ 			b.writeln('\t\t\treturn ${vname}{')
+-			b.writeln('\t\t\t\tkind: ${vname}_StringValue{')
++			b.writeln('\t\t\t\tkind: ${vname}_StringValue_Case{')
+ 			b.writeln('\t\t\t\t\tvalue: a.clone()')
+ 			b.writeln('\t\t\t\t}')
+ 			b.writeln('\t\t\t}')
+ 			b.writeln('\t\t}')
+-			b.writeln('\t\tmap[string]json2.Any {')
++			b.writeln('\t\tmap[string]protobuf.JsonValue {')
+ 			b.writeln('\t\t\treturn ${vname}{')
+-			b.writeln('\t\t\t\tkind: ${vname}_StructValue{')
++			b.writeln('\t\t\t\tkind: ${vname}_StructValue_Case{')
+ 			b.writeln('\t\t\t\t\tvalue: ${struct_v}.from_json_value(a)!')
+ 			b.writeln('\t\t\t\t}')
+ 			b.writeln('\t\t\t}')
+ 			b.writeln('\t\t}')
+-			b.writeln('\t\t[]json2.Any {')
++			b.writeln('\t\t[]protobuf.JsonValue {')
+ 			b.writeln('\t\t\treturn ${vname}{')
+-			b.writeln('\t\t\t\tkind: ${vname}_ListValue{')
++			b.writeln('\t\t\t\tkind: ${vname}_ListValue_Case{')
+ 			b.writeln('\t\t\t\t\tvalue: ${list_v}.from_json_value(a)!')
+ 			b.writeln('\t\t\t\t}')
+ 			b.writeln('\t\t\t}')
+ 			b.writeln('\t\t}')
+ 			b.writeln('\t\telse {')
+ 			b.writeln('\t\t\treturn ${vname}{')
+-			b.writeln('\t\t\t\tkind: ${vname}_NumberValue{')
++			b.writeln('\t\t\t\tkind: ${vname}_NumberValue_Case{')
+ 			b.writeln('\t\t\t\t\tvalue: protobuf.json_floatv(a)!')
+ 			b.writeln('\t\t\t\t}')
+ 			b.writeln('\t\t\t}')
+@@ -572,15 +545,15 @@
+ 		'ListValue' {
+ 			b.writeln('')
+ 			b.writeln('// canonical JSON form: a plain array')
+-			b.writeln('pub fn (m &${vname}) json_value() !json2.Any {')
+-			b.writeln('\tmut arr := []json2.Any{cap: m.values.len}')
++			b.writeln('pub fn (m &${vname}) json_value() !protobuf.JsonValue {')
++			b.writeln('\tmut arr := []protobuf.JsonValue{cap: m.values.len}')
+ 			b.writeln('\tfor v in m.values {')
+ 			b.writeln('\t\tarr << v.json_value()!')
+ 			b.writeln('\t}')
+-			b.writeln('\treturn json2.Any(arr)')
+-			b.writeln('}')
+-			b.writeln('')
+-			b.writeln('pub fn ${vname}.from_json_value(a json2.Any) !${vname} {')
++			b.writeln('\treturn protobuf.JsonValue(arr)')
++			b.writeln('}')
++			b.writeln('')
++			b.writeln('pub fn ${vname}.from_json_value(a protobuf.JsonValue) !${vname} {')
+ 			b.writeln('\tmut m := ${vname}{}')
+ 			b.writeln('\tfor it in protobuf.json_array(a)! {')
+ 			b.writeln('\t\tm.values << ${value_v}.from_json_value(it)!')
+@@ -591,20 +564,20 @@
+ 		'FieldMask' {
+ 			b.writeln('')
+ 			b.writeln('// canonical JSON form: comma-joined lowerCamel paths')
+-			b.writeln('pub fn (m &${vname}) json_value() !json2.Any {')
++			b.writeln('pub fn (m &${vname}) json_value() !protobuf.JsonValue {')
+ 			b.writeln('\tmut parts := []string{cap: m.paths.len}')
+ 			b.writeln('\tfor p in m.paths {')
+-			b.writeln('\t\tparts << protobuf.json_camel_path(p)')
+-			b.writeln('\t}')
+-			b.writeln("\treturn json2.Any(parts.join(','))")
+-			b.writeln('}')
+-			b.writeln('')
+-			b.writeln('pub fn ${vname}.from_json_value(a json2.Any) !${vname} {')
++			b.writeln('\t\tparts << protobuf.json_fieldmask_path(p)!')
++			b.writeln('\t}')
++			b.writeln("\treturn protobuf.JsonValue(parts.join(','))")
++			b.writeln('}')
++			b.writeln('')
++			b.writeln('pub fn ${vname}.from_json_value(a protobuf.JsonValue) !${vname} {')
+ 			b.writeln('\ts := protobuf.json_stringv(a)!')
+ 			b.writeln('\tmut m := ${vname}{}')
+ 			b.writeln("\tif s != '' {")
+ 			b.writeln("\t\tfor p in s.split(',') {")
+-			b.writeln('\t\t\tm.paths << protobuf.json_snake_path(p)')
++			b.writeln('\t\t\tm.paths << protobuf.json_mask_path(p)!')
+ 			b.writeln('\t\t}')
+ 			b.writeln('\t}')
+ 			b.writeln('\treturn m')
+@@ -615,11 +588,11 @@
+ 			st := wrapper_scalar[name]
+ 			b.writeln('')
+ 			b.writeln('// canonical JSON form: the wrapped value')
+-			b.writeln('pub fn (m &${vname}) json_value() !json2.Any {')
++			b.writeln('pub fn (m &${vname}) json_value() !protobuf.JsonValue {')
+ 			b.writeln('\treturn ${json_scalar_emit(st, 'm.value')}')
+ 			b.writeln('}')
+ 			b.writeln('')
+-			b.writeln('pub fn ${vname}.from_json_value(a json2.Any) !${vname} {')
++			b.writeln('pub fn ${vname}.from_json_value(a protobuf.JsonValue) !${vname} {')
+ 			b.writeln('\treturn ${vname}{')
+ 			b.writeln('\t\tvalue: ${json_scalar_parse(st, 'a')}')
+ 			b.writeln('\t}')
+--- a/gen/json_test.v
++++ b/gen/json_test.v
+@@ -70,7 +70,7 @@
+ 				name: \'Fido\'
+ 			}
+ 		}
+-		pick:        Pet_SArm{
++		pick:        Pet_SArm_Case{
+ 			value: \'\'
+ 		}
+ 		born:        GoogleProtobuf_Timestamp{
+@@ -87,16 +87,16 @@
+ 		meta:        GoogleProtobuf_Struct{
+ 			fields: {
+ 				\'k\': GoogleProtobuf_Value{
+-					kind: GoogleProtobuf_Value_ListValue{
++					kind: GoogleProtobuf_Value_ListValue_Case{
+ 						value: GoogleProtobuf_ListValue{
+ 							values: [
+ 								GoogleProtobuf_Value{
+-									kind: GoogleProtobuf_Value_NumberValue{
++									kind: GoogleProtobuf_Value_NumberValue_Case{
+ 										value: 1.5
+ 									}
+ 								},
+ 								GoogleProtobuf_Value{
+-									kind: GoogleProtobuf_Value_NullValue{}
++									kind: GoogleProtobuf_Value_NullValue_Case{}
+ 								},
+ 							]
+ 						}
+@@ -131,9 +131,10 @@
+ 	assert r.opt_zero or { panic(\'absent\') } == 3
+ 	assert r.mood == .mood_happy
+ 	assert r.big == 12
+-	// null means absent, unknown keys ignored
+-	n := Pet.from_json(\'{"name": null, "nosuch": 1}\') or { panic(err) }
++	// null means absent; unknown keys are rejected
++	n := Pet.from_json(\'{"name": null}\') or { panic(err) }
+ 	assert n == Pet{}
++	if _ := Pet.from_json(\'{"nosuch": 1}\') { panic(\'unknown field accepted\') }
+ 	// non-finite floats
+ 	inf := Pet{
+ 		ratio: math.inf(1)
+@@ -147,7 +148,7 @@
+ 	println(\'JSON OK\')
+ }')!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(edir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(edir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('JSON OK'), res.output
+ }
+--- a/gen/loader_test.v
++++ b/gen/loader_test.v
+@@ -221,7 +221,7 @@
+ 	println('ANY OK')
+ }")!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(edir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(edir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('ANY OK'), res.output
+ }
+@@ -289,7 +289,7 @@
+ 	println('WKT TIME OK')
+ }")!
+ 	vexe := os.getenv_opt('VEXE') or { 'v' }
+-	res := os.execute('${os.quoted_path(vexe)} run ${os.quoted_path(edir)}')
++	res := os.execute('${os.quoted_path(vexe)} -d use_bundled_libgc run ${os.quoted_path(edir)}')
+ 	assert res.exit_code == 0, res.output
+ 	assert res.output.contains('WKT TIME OK'), res.output
+ }
+--- a/json_util.v
++++ b/json_util.v
+@@ -5,6 +5,65 @@
+ import math
+ import strconv
+ import time
++import encoding.utf8
++
++// Numeric tokens retain their exact spelling until a schema-selected conversion.
++pub struct JsonNumber {
++	text string
++}
++
++pub type JsonValue = JsonNumber
++	| []JsonValue
++	| map[string]JsonValue
++	| string
++	| bool
++	| json2.Null
++	| int
++	| i8
++	| i16
++	| i32
++	| i64
++	| u8
++	| u16
++	| u32
++	| u64
++	| f32
++	| f64
++
++pub fn (value JsonValue) json_str() !string {
++	return match value {
++		JsonNumber { value.text }
++		[]JsonValue {
++			mut items := []string{}
++			for item in value { items << item.json_str()! }
++			'[' + items.join(',') + ']'
++		}
++		map[string]JsonValue {
++			mut items := []string{}
++			mut keys := value.keys()
++			keys.sort()
++			for key in keys {
++				if !utf8.validate_str(key) { return error('protojson: invalid UTF-8 map key') }
++				item := value[key] or { return error('protojson: missing object key') }
++				items << json2.encode(key) + ':' + item.json_str()!
++			}
++			'{' + items.join(',') + '}'
++		}
++		json2.Null { 'null' }
++		string {
++			if !utf8.validate_str(value) { return error('protojson: invalid UTF-8 string') }
++			json2.encode(value)
++		}
++		bool { json2.encode(value) }
++		int, i8, i16, i32, i64, u8, u16, u32, u64 { value.str() }
++		f32, f64 {
++			if math.is_nan(f64(value)) || math.is_inf(f64(value), 0) {
++				return error('protojson: non-finite JSON number')
++			}
++			value.str()
++		}
++	}
++}
+ 
+ // Runtime support for the generated canonical-JSON (protojson) methods.
+ // Parsers are tolerant the way the spec demands: 64-bit ints arrive as
+@@ -15,9 +74,13 @@
+ // json2's recursive parser segfaults (upstream issue)
+ pub const json_max_depth = 1000
+ 
+-pub fn json_parse(src string) !json2.Any {
++pub fn json_parse(src string) !JsonValue {
++	if !utf8.validate_str(src) { return error('protojson: invalid UTF-8 document') }
+ 	json_precheck(src)!
+-	return json2.decode[json2.Any](src)
++	mut scanner := json2.new_scanner(src)
++	value, next := json_read_value(mut scanner, scanner.next()!, 0)!
++	if !next.is_eof() { return error('protojson: trailing document data') }
++	return value
+ }
+ 
+ // iterative structural pre-scan, guarding two json2 pathologies on
+@@ -121,21 +184,21 @@
+ 	return i == n
+ }
+ 
+-pub fn json_object(a json2.Any) !map[string]json2.Any {
+-	if a is map[string]json2.Any {
++pub fn json_object(a JsonValue) !map[string]JsonValue {
++	if a is map[string]JsonValue {
+ 		return a
+ 	}
+ 	return error('protojson: expected object, got ${a.type_name()}')
+ }
+ 
+-pub fn json_array(a json2.Any) ![]json2.Any {
+-	if a is []json2.Any {
++pub fn json_array(a JsonValue) ![]JsonValue {
++	if a is []JsonValue {
+ 		return a
+ 	}
+ 	return error('protojson: expected array, got ${a.type_name()}')
+ }
+ 
+-pub fn json_stringv(a json2.Any) !string {
++pub fn json_stringv(a JsonValue) !string {
+ 	if a is string {
+ 		// clone: json2's string values can be windows into a decode buffer that
+ 		// is later reused, which corrupts map/repeated string values once the
+@@ -145,15 +208,16 @@
+ 	return error('protojson: expected string, got ${a.type_name()}')
+ }
+ 
+-pub fn json_boolv(a json2.Any) !bool {
++pub fn json_boolv(a JsonValue) !bool {
+ 	if a is bool {
+ 		return a
+ 	}
+ 	return error('protojson: expected bool, got ${a.type_name()}')
+ }
+ 
+-pub fn json_intv(a json2.Any) !i64 {
++pub fn json_intv(a JsonValue) !i64 {
+ 	match a {
++		JsonNumber { return json_key_i64(json_integral_text(a.text)!) }
+ 		i64 {
+ 			return a
+ 		}
+@@ -187,7 +251,7 @@
+ 		f64 {
+ 			// casting non-finite or out-of-range floats to i64 is UB in C
+ 			if math.is_nan(a) || math.is_inf(a, 0) || a < -9.223372036854776e18
+-				|| a > 9.223372036854776e18 {
++				|| a >= 9.223372036854776e18 {
+ 				return error('protojson: number out of integer range')
+ 			}
+ 			if a != f64(i64(a)) {
+@@ -196,10 +260,10 @@
+ 			return i64(a)
+ 		}
+ 		f32 {
+-			return json_intv(json2.Any(f64(a)))
++			return json_intv(JsonValue(f64(a)))
+ 		}
+ 		string {
+-			return json_key_i64(a)
++			return json_key_i64(json_integral_text(a)!)
+ 		}
+ 		else {
+ 			return error('protojson: expected integer, got ${a.type_name()}')
+@@ -207,8 +271,9 @@
+ 	}
+ }
+ 
+-pub fn json_uintv(a json2.Any) !u64 {
++pub fn json_uintv(a JsonValue) !u64 {
+ 	match a {
++		JsonNumber { return json_key_u64(json_integral_text(a.text)!) }
+ 		u64 {
+ 			return a
+ 		}
+@@ -229,7 +294,7 @@
+ 			return u64(v)
+ 		}
+ 		f64 {
+-			if math.is_nan(a) || math.is_inf(a, 0) || a < 0 || a > 1.8446744073709552e19 {
++			if math.is_nan(a) || math.is_inf(a, 0) || a < 0 || a >= 1.8446744073709552e19 {
+ 				return error('protojson: number out of unsigned range')
+ 			}
+ 			if a != f64(u64(a)) {
+@@ -238,10 +303,10 @@
+ 			return u64(a)
+ 		}
+ 		f32 {
+-			return json_uintv(json2.Any(f64(a)))
++			return json_uintv(JsonValue(f64(a)))
+ 		}
+ 		string {
+-			return json_key_u64(a)
++			return json_key_u64(json_integral_text(a)!)
+ 		}
+ 		else {
+ 			return error('protojson: expected unsigned integer, got ${a.type_name()}')
+@@ -249,8 +314,15 @@
+ 	}
+ }
+ 
+-pub fn json_floatv(a json2.Any) !f64 {
++pub fn json_floatv(a JsonValue) !f64 {
+ 	match a {
++		JsonNumber {
++			value := strconv.atof64(a.text)!
++			if math.is_nan(value) || math.is_inf(value, 0) {
++				return error('protojson: floating point overflow')
++			}
++			return value
++		}
+ 		f64 {
+ 			return a
+ 		}
+@@ -296,9 +368,20 @@
+ 					return math.inf(-1)
+ 				}
+ 				else {
+-					return strconv.atof64(a) or {
+-						return error('protojson: bad float string `${a}`')
++					if a == '' || a.trim_space() != a {
++						return error('protojson: invalid float string')
+ 					}
++					// The reference reads the first numeric JSON token in a quoted
++					// number. Match its delimiters, then validate that token exactly.
++					mut end := 0
++					for end < a.len && a[end] !in [u8(9), 10, 13, 32, 44, 58, 91, 93, 123, 125] {
++						end++
++					}
++					text := a[..end]
++					if !is_json_number(text) {
++						return error('protojson: invalid float number grammar')
++					}
++					return json_floatv(JsonValue(JsonNumber{ text: text }))!
+ 				}
+ 			}
+ 		}
+@@ -310,7 +393,7 @@
+ 
+ // float fields reject a finite JSON number that overflows f32; only the
+ // explicit "Infinity"/"-Infinity"/"NaN" strings may yield a non-finite float
+-pub fn json_f32v(a json2.Any) !f32 {
++pub fn json_f32v(a JsonValue) !f32 {
+ 	v := json_floatv(a)!
+ 	f := f32(v)
+ 	if math.is_inf(f, 0) && !math.is_inf(v, 0) {
+@@ -321,7 +404,7 @@
+ 
+ // double fields: a non-finite result from a JSON number (as opposed to the
+ // string spellings) means the literal overflowed the double range
+-pub fn json_f64v(a json2.Any) !f64 {
++pub fn json_f64v(a JsonValue) !f64 {
+ 	if a is string {
+ 		return json_floatv(a)!
+ 	}
+@@ -343,6 +426,11 @@
+ 	if s.ends_with('z') {
+ 		return error('protojson: timestamp zone must be uppercase Z')
+ 	}
++	if s.len > 19 && s[19] == `.` {
++		mut end := 20
++		for end < s.len && s[end].is_digit() { end++ }
++		if end - 20 < 1 || end - 20 > 9 { return error('protojson: invalid timestamp fraction') }
++	}
+ 	t := time.parse_rfc3339(s) or { return error('protojson: bad timestamp `${s}`') }
+ 	secs := t.unix()
+ 	if secs < -62135596800 || secs > 253402300799 {
+@@ -351,22 +439,32 @@
+ 	return secs, t.nanosecond
+ }
+ 
+-pub fn json_bytesv(a json2.Any) ![]u8 {
++pub fn json_bytesv(a JsonValue) ![]u8 {
+ 	s := json_stringv(a)!
+-	if s == '' {
+-		return []u8{}
+-	}
+-	if s.contains('-') || s.contains('_') {
+-		return base64.url_decode(s)
+-	}
+-	out := base64.decode(s)
+-	if out.len == 0 {
+-		return error('protojson: invalid base64 `${s}`')
+-	}
+-	return out
+-}
+-
+-pub fn json_int32v(a json2.Any) !int {
++	// ProtoJSON accepts either alphabet and optional padding. Select padding
++	// from the original token, as Go protobuf does; only CR/LF may be ignored.
++	url := s.contains('-') || s.contains('_')
++	padded := s.len % 4 == 0
++	clean := s.replace('\r', '').replace('\n', '')
++	mut end := clean.len
++	for end > 0 && clean[end - 1] == `=` { end-- }
++	padding := clean.len - end
++	if padding > 2 || (!padded && padding > 0) || (padded && clean.len % 4 != 0) || end % 4 == 1 {
++		return error('protojson: invalid base64')
++	}
++	if padding > 0 && ((padding == 1 && end % 4 != 3) || (padding == 2 && end % 4 != 2)) {
++		return error('protojson: invalid base64 padding')
++	}
++	for c in clean[..end] {
++		if (c >= `A` && c <= `Z`) || (c >= `a` && c <= `z`) || (c >= `0` && c <= `9`) { continue }
++		if (url && c in [`-`, `_`]) || (!url && c in [`+`, `/`]) { continue }
++		return error('protojson: invalid base64 character or mixed alphabets')
++	}
++	canonical := clean[..end].replace('-', '+').replace('_', '/') + '='.repeat((4 - end % 4) % 4)
++	return base64.decode(canonical)
++}
++
++pub fn json_int32v(a JsonValue) !int {
+ 	v := json_intv(a)!
+ 	if v < -2147483648 || v > 2147483647 {
+ 		return error('protojson: value ${v} out of int32 range')
+@@ -374,7 +472,7 @@
+ 	return int(v)
+ }
+ 
+-pub fn json_uint32v(a json2.Any) !u32 {
++pub fn json_uint32v(a JsonValue) !u32 {
+ 	v := json_uintv(a)!
+ 	if v > 4294967295 {
+ 		return error('protojson: value ${v} out of uint32 range')
+@@ -403,6 +501,20 @@
+ 	return segs.join('.')
+ }
+ 
++pub fn json_fieldmask_path(p string) !string {
++	for segment in p.split('.') {
++		if segment.len == 0 { return error('protojson: empty FieldMask path segment') }
++		for index, c in segment {
++			if (c >= `A` && c <= `Z`) || (c >= `a` && c <= `z`) || c == `_` { continue }
++			if index > 0 && c >= `0` && c <= `9` { continue }
++			return error('protojson: invalid FieldMask path')
++		}
++	}
++	camel := json_camel_path(p)
++	if json_snake_path(camel) != p { return error('protojson: irreversible FieldMask path') }
++	return camel
++}
++
+ pub fn json_snake_path(p string) string {
+ 	mut segs := []string{}
+ 	for seg in p.split('.') {
+@@ -421,21 +533,9 @@
+ 
+ // map keys arrive as strings regardless of the proto key type
+ pub fn json_key_i64(k string) !i64 {
++	if k == '-0' { return 0 }
+ 	if k == '' {
+ 		return error('protojson: empty integer string')
+-	}
+-	// protojson accepts exponential/decimal spellings for integer fields when
+-	// the value is integral and in range (e.g. "1E5", "100.0")
+-	if k.contains('.') || k.contains('e') || k.contains('E') {
+-		f := strconv.atof64(k) or { return error('protojson: bad integer `${k}`') }
+-		if math.is_nan(f) || math.is_inf(f, 0) || f < -9.223372036854776e18
+-			|| f > 9.223372036854776e18 {
+-			return error('protojson: integer out of range `${k}`')
+-		}
+-		if f != f64(i64(f)) {
+-			return error('protojson: not an integer `${k}`')
+-		}
+-		return i64(f)
+ 	}
+ 	v := strconv.parse_int(k, 10, 64) or { return error('protojson: bad integer `${k}`') }
+ 	// V's parse_int silently clamps on overflow; round-trip to catch it
+@@ -446,18 +546,9 @@
+ }
+ 
+ pub fn json_key_u64(k string) !u64 {
++	if k == '-0' { return 0 }
+ 	if k == '' {
+ 		return error('protojson: empty integer string')
+-	}
+-	if k.contains('.') || k.contains('e') || k.contains('E') {
+-		f := strconv.atof64(k) or { return error('protojson: bad integer `${k}`') }
+-		if math.is_nan(f) || math.is_inf(f, 0) || f < 0 || f > 1.8446744073709552e19 {
+-			return error('protojson: unsigned out of range `${k}`')
+-		}
+-		if f != f64(u64(f)) {
+-			return error('protojson: not an integer `${k}`')
+-		}
+-		return u64(f)
+ 	}
+ 	v := strconv.parse_uint(k, 10, 64) or { return error('protojson: bad unsigned `${k}`') }
+ 	if v.str() != k {
+@@ -468,40 +559,163 @@
+ 
+ // emission: 64-bit ints are JSON strings (JS numbers lose precision),
+ // non-finite floats are the spec's string spellings
+-pub fn json_i64(v i64) json2.Any {
+-	return json2.Any(v.str())
+-}
+-
+-pub fn json_u64(v u64) json2.Any {
+-	return json2.Any(v.str())
+-}
+-
+-pub fn json_f64(v f64) json2.Any {
++pub fn json_i64(v i64) JsonValue {
++	return JsonValue(v.str())
++}
++
++pub fn json_u64(v u64) JsonValue {
++	return JsonValue(v.str())
++}
++
++// google.protobuf.Value numbers cannot use string forms for nonfinite floats.
++pub fn json_value_number(v f64) !JsonValue {
++	if math.is_nan(v) || math.is_inf(v, 1) || math.is_inf(v, -1) {
++		return error('protojson: nonfinite Value number')
++	}
++	return JsonValue(v)
++}
++
++pub fn json_f64(v f64) JsonValue {
+ 	if math.is_nan(v) {
+-		return json2.Any('NaN')
++		return JsonValue('NaN')
+ 	}
+ 	if math.is_inf(v, 1) {
+-		return json2.Any('Infinity')
++		return JsonValue('Infinity')
+ 	}
+ 	if math.is_inf(v, -1) {
+-		return json2.Any('-Infinity')
+-	}
+-	return json2.Any(v)
+-}
+-
+-pub fn json_f32(v f32) json2.Any {
++		return JsonValue('-Infinity')
++	}
++	return JsonValue(v)
++}
++
++pub fn json_f32(v f32) JsonValue {
+ 	if math.is_nan(f64(v)) {
+-		return json2.Any('NaN')
++		return JsonValue('NaN')
+ 	}
+ 	if math.is_inf(f64(v), 1) {
+-		return json2.Any('Infinity')
++		return JsonValue('Infinity')
+ 	}
+ 	if math.is_inf(f64(v), -1) {
+-		return json2.Any('-Infinity')
+-	}
+-	return json2.Any(v)
+-}
+-
+-pub fn json_b64(b []u8) json2.Any {
+-	return json2.Any(base64.encode(b))
+-}
++		return JsonValue('-Infinity')
++	}
++	return JsonValue(v)
++}
++
++pub fn json_b64(b []u8) JsonValue {
++	return JsonValue(base64.encode(b))
++}
++
++fn json_read_value(mut scanner json2.Scanner, token json2.Token, depth int) !(JsonValue, json2.Token) {
++	if depth > json_max_depth { return error('protojson: excessive nesting') }
++	match token.kind {
++		.lcbr {
++			mut result := map[string]JsonValue{}
++			mut key := scanner.next()!
++			if key.kind == .rcbr { return JsonValue(result), scanner.next()! }
++			for {
++				if key.kind != .str { return error('protojson: expected object key') }
++				name := key.literal().clone()
++				if name in result { return error('protojson: duplicate object key') }
++				if scanner.next()!.kind != .colon { return error('protojson: expected colon') }
++				value, next := json_read_value(mut scanner, scanner.next()!, depth + 1)!
++				result[name] = value
++				if next.kind == .rcbr { return JsonValue(result), scanner.next()! }
++				if next.kind != .comma { return error('protojson: expected object separator') }
++				key = scanner.next()!
++			}
++		}
++		.lsbr {
++			mut result := []JsonValue{}
++			mut first := scanner.next()!
++			if first.kind == .rsbr { return JsonValue(result), scanner.next()! }
++			for {
++				value, next := json_read_value(mut scanner, first, depth + 1)!
++				result << value
++				if next.kind == .rsbr { return JsonValue(result), scanner.next()! }
++				if next.kind != .comma { return error('protojson: expected array separator') }
++				first = scanner.next()!
++			}
++		}
++		.str { return JsonValue(token.literal().clone()), scanner.next()! }
++		.null { return JsonValue(json2.Null{}), scanner.next()! }
++		.bool { return JsonValue(token.literal() == 'true'), scanner.next()! }
++		.int, .float {
++			return JsonValue(JsonNumber{ text: token.literal().clone() }), scanner.next()!
++		}
++		else { return error('protojson: expected value') }
++	}
++}
++
++pub fn json_duration_parts(text string) !(i64, int) {
++	if !text.ends_with('s') || text.len < 2 { return error('protojson: invalid duration') }
++	negative := text.starts_with('-')
++	body := text[if negative { 1 } else { 0 }..text.len - 1]
++	parts := body.split('.')
++	if parts.len > 2 || parts[0].len == 0 { return error('protojson: invalid duration') }
++	for part in parts {
++		if part.len == 0 { return error('protojson: invalid duration') }
++		for digit in part { if !digit.is_digit() { return error('protojson: invalid duration') } }
++	}
++	mut seconds := strconv.parse_int(parts[0], 10, 64)!
++	if seconds < 0 || seconds > 315576000000 { return error('protojson: duration out of range') }
++	mut nanos := 0
++	if parts.len == 2 {
++		if parts[1].len > 9 { return error('protojson: invalid duration fraction') }
++		nanos = (parts[1] + '0'.repeat(9 - parts[1].len)).int()
++	}
++	if negative {
++		seconds = -seconds
++		nanos = -nanos
++	}
++	return seconds, nanos
++}
++
++pub fn json_mask_path(path string) !string {
++	if path == '' { return error('protojson: empty field mask path') }
++	for segment in path.split('.') {
++		if segment == '' { return error('protojson: empty field mask segment') }
++		for index, c in segment {
++			if !(c >= `a` && c <= `z`) && !(c >= `A` && c <= `Z`) && !(index > 0 && c.is_digit()) {
++				return error('protojson: invalid field mask segment')
++			}
++		}
++	}
++	return json_snake_path(path)
++}
++
++// Convert decimal/exponent integer spellings exactly, without an intermediate
++// float that can erase fractions or round across a 64-bit boundary.
++fn json_integral_text(text string) !string {
++	if !is_json_number(text) { return error('protojson: invalid integer spelling') }
++	negative := text.starts_with('-')
++	body := if negative { text[1..] } else { text }
++	parts := body.to_lower().split('e')
++	coefficient := parts[0]
++	decimal := coefficient.index('.') or { coefficient.len }
++	digits := coefficient.replace('.', '')
++	if digits.trim_left('0') == '' { return '0' }
++	mut exponent := 0
++	if parts.len == 2 {
++		value := parts[1]
++		if value.trim_left('+-0').len > 3 {
++			return error('protojson: integer exponent out of range')
++		}
++		exponent = value.int()
++		if exponent < -1000 || exponent > 1000 {
++			return error('protojson: integer exponent out of range')
++		}
++	}
++	position := decimal + exponent
++	if position <= 0 { return error('protojson: fractional integer') }
++	mut integer := ''
++	if position < digits.len {
++		if digits[position..].trim_left('0') != '' { return error('protojson: fractional integer') }
++		integer = digits[..position]
++	} else {
++		if position - digits.len > 20 { return error('protojson: integer out of range') }
++		integer = digits + '0'.repeat(position - digits.len)
++	}
++	integer = integer.trim_left('0')
++	if integer.len > 20 { return error('protojson: integer out of range') }
++	return if negative { '-' + integer } else { integer }
++}
+--- a/json_util_test.v
++++ b/json_util_test.v
+@@ -64,19 +64,55 @@
+ 		assert false, err.msg()
+ 		return
+ 	}
+-	assert (o['a'] or { json2.Any('') }) as string == '}{]['
++	assert (o['a'] or { JsonValue('') }) as string == '}{]['
+ }
+ 
+ fn test_nonfinite_numbers_rejected_for_ints() {
+ 	for bad in [math.inf(1), math.inf(-1), math.nan(), 1e300] {
+-		if _ := json_intv(json2.Any(bad)) {
++		if _ := json_intv(JsonValue(bad)) {
+ 			assert false, 'i64 accepted ${bad}'
+ 		}
+-		if _ := json_uintv(json2.Any(bad)) {
++		if _ := json_uintv(JsonValue(bad)) {
+ 			assert false, 'u64 accepted ${bad}'
+ 		}
+ 	}
+ 	// integral in-range floats still convert
+-	assert json_intv(json2.Any(f64(-3))) or { -1 } == -3
+-	assert json_uintv(json2.Any(f64(7))) or { 0 } == 7
++	assert json_intv(JsonValue(f64(-3))) or { -1 } == -3
++	assert json_uintv(JsonValue(f64(7))) or { 0 } == 7
+ }
++
++fn test_protojson_bytes_alphabets_padding_and_ignored_newlines() {
++	assert json_bytesv(JsonValue('Zg'))! == 'f'.bytes()
++	assert json_bytesv(JsonValue('Zg=='))! == 'f'.bytes()
++	assert json_bytesv(JsonValue('_w'))! == [u8(255)]
++	assert json_bytesv(JsonValue('/w=='))! == [u8(255)]
++	assert json_bytesv(JsonValue('AA'))! == [u8(0)]
++	assert json_bytesv(JsonValue('AAA'))! == [u8(0), 0]
++	assert json_bytesv(JsonValue('AB'))! == [u8(0)]
++	assert json_bytesv(JsonValue('ABC='))! == [u8(0), 16]
++	assert json_bytesv(JsonValue('A\r\n\r\nA=='))! == [u8(0)]
++	assert json_bytesv(JsonValue('\r\n'))! == []u8{}
++	for value in ['A', 'Zg=', 'Z===', 'A===', '====', 'AA=A', 'AA==A', 'AA!A', 'AA-_==', 'AA+-',
++		'AA_/', 'AA A', 'AA\tAA', 'AA==\n'] {
++		if _ := json_bytesv(JsonValue(value)) {
++			assert false, 'accepted invalid base64 ${value}'
++		}
++	}
++}
++
++fn test_protojson_value_number_and_fieldmask_output_validation() {
++	assert json_value_number(1.5)!.json_str()! == '1.5'
++	for value in [math.nan(), math.inf(1), math.inf(-1)] {
++		if _ := json_value_number(value) {
++			assert false, 'nonfinite Value number accepted'
++		}
++	}
++	assert json_fieldmask_path('foo_bar.baz')! == 'fooBar.baz'
++	assert json_fieldmask_path('_foo')! == 'Foo'
++	for path in ['', 'foo__bar', 'foo_', 'foo_1', 'Foo', 'foo..bar', '0foo', 'foo.0bar', 'foo-bar',
++		'foo,bar', '世界'] {
++		if _ := json_fieldmask_path(path) {
++			assert false, 'invalid FieldMask path accepted: ' + path
++		}
++	}
++}
+--- a/wire.v
++++ b/wire.v
+@@ -1,12 +1,14 @@
+ module protobuf
+ 
+ // Wire types per the protobuf encoding spec.
+-// Groups (3/4) are deprecated proto2-only constructs and are rejected.
++// Unknown groups remain valid wire data and must be skipped with matching tags.
+ pub enum WireType {
+-	varint    = 0
+-	fixed64   = 1
+-	len_delim = 2
+-	fixed32   = 5
++	varint      = 0
++	fixed64     = 1
++	len_delim   = 2
++	start_group = 3
++	end_group   = 4
++	fixed32     = 5
+ }
+ 
+ @[inline]
+@@ -16,7 +18,8 @@
+ 		1 { return .fixed64 }
+ 		2 { return .len_delim }
+ 		5 { return .fixed32 }
+-		3, 4 { return error('deprecated group wire type ${v}') }
++		3 { return .start_group }
++		4 { return .end_group }
+ 		else { return error('invalid wire type ${v}') }
+ 	}
+ }
+--- a/wire_test.v
++++ b/wire_test.v
+@@ -349,8 +349,6 @@
+ 
+ fn test_bad_tags() {
+ 	assert expect_tag_error([u8(0x00)]) // field 0
+-	assert expect_tag_error([u8(0x0b)]) // group start, wire type 3
+-	assert expect_tag_error([u8(0x0c)]) // group end, wire type 4
+ 	assert expect_tag_error([u8(0x0e)]) // wire type 6
+ 	assert expect_tag_error([u8(0x0f)]) // wire type 7
+ }
+@@ -373,3 +371,33 @@
+ 		assert false, 'expected skip error'
+ 	}
+ }
++
++fn test_redundant_tag_varint_and_unknown_groups() ! {
++	mut decoder := Decoder{ buf: [u8(0x8a), 0x80, 0x80, 0x80, 0x80, 0x00, 0x00] }
++	field, wire := decoder.read_tag()!
++	assert field == 1 && wire == .len_delim
++	assert decoder.read_string()! == ''
++	mut groups := Decoder{ buf: [u8(0x0b), 0x13, 0x18, 0x07, 0x14, 0x0c, 0x10, 0x09] }
++	_, start := groups.read_tag()!
++	groups.skip(start)!
++	last, last_wire := groups.read_tag()!
++	assert last == 2 && last_wire == .varint
++	assert groups.read_varint()! == 9
++}
++
++fn test_utf8_overflow_and_mismatched_group_rejection() ! {
++	mut string_value := Decoder{ buf: [u8(1), 0xff] }
++	if _ := string_value.read_string() {
++		assert false, 'invalid UTF-8 accepted'
++	}
++	for last in [u8(2), 127, 128, 255] {
++		mut bytes := [u8(255), 255, 255, 255, 255, 255, 255, 255, 255]
++		bytes << last
++		assert expect_varint_error(bytes)
++	}
++	mut mismatch := Decoder{ buf: [u8(0x0b), 0x14] }
++	_, start := mismatch.read_tag()!
++	if _ := mismatch.skip(start) {
++		assert false, 'mismatched group accepted'
++	}
++}

@@ -1,0 +1,196 @@
+--- a/crates/client/src/worker.rs
++++ b/crates/client/src/worker.rs
+@@ -19,7 +19,7 @@
+         TaskToken,
+         temporal::api::{
+             worker::v1::WorkerHeartbeat,
+-            workflowservice::v1::{DescribeNamespaceResponse, PollWorkflowTaskQueueResponse},
++            workflowservice::v1::{DescribeNamespaceResponse, PollActivityTaskQueueResponse, PollWorkflowTaskQueueResponse},
+         },
+     },
+     worker::{WorkerDeploymentOptions, WorkerTaskTypes},
+@@ -36,6 +36,12 @@
+         self: Box<Self>,
+         task: PollWorkflowTaskQueueResponse,
+     ) -> Result<(), anyhow::Error>;
++}
++
++/// A reserved remote Activity slot, released automatically when not used.
++pub trait ActivitySlot {
++    /// Dispatch the inline started task to the worker owning this reservation.
++    fn schedule_activity(self: Box<Self>, task: PollActivityTaskQueueResponse) -> Result<(), anyhow::Error>;
+ }
+ 
+ /// Result of reserving a workflow task slot, including deployment options if applicable.
+@@ -142,6 +148,19 @@
+                         deployment_options,
+                     });
+                 }
++            }
++        }
++        None
++    }
++
++    fn try_reserve_activity_slot(&self, namespace: String, task_queue: String) -> Option<Box<dyn ActivitySlot + Send>> {
++        let key = SlotKey::new(namespace, task_queue);
++        let workers = self.slot_providers.get(&key)?;
++        let eligible: Vec<_> = workers.iter().filter(|info| info.task_types.enable_remote_activities).collect();
++        for worker_id in Self::worker_ids_in_selection_order(&eligible) {
++            if let Some(worker) = self.all_workers.get(&worker_id)
++                && let Some(slot) = worker.try_reserve_activity_slot() {
++                return Some(slot);
+             }
+         }
+         None
+@@ -435,6 +454,10 @@
+             .try_reserve_wft_slot(namespace, task_queue)
+     }
+ 
++    pub(crate) fn try_reserve_activity_slot(&self, namespace: String, task_queue: String) -> Option<Box<dyn ActivitySlot + Send>> {
++        self.worker_manager.read().try_reserve_activity_slot(namespace, task_queue)
++    }
++
+     /// Register a local worker that can provide WFT processing slots and potentially worker heartbeating.
+     pub fn register_worker(
+         &self,
+@@ -552,6 +575,10 @@
+     /// or `None` if all slots are currently in use. The returned slot will be used
+     /// to process exactly one workflow task.
+     fn try_reserve_wft_slot(&self) -> Option<Box<dyn Slot + Send>>;
++
++    /// Reserve a remote Activity slot for eager standalone execution.
++    fn try_reserve_activity_slot(&self) -> Option<Box<dyn ActivitySlot + Send>> { None }
++
+ 
+     /// Get the worker deployment options for this worker, if using deployment-based versioning.
+     fn deployment_options(&self) -> Option<WorkerDeploymentOptions>;
+--- a/crates/client/src/grpc.rs
++++ b/crates/client/src/grpc.rs
+@@ -9,7 +9,7 @@
+     TEMPORAL_NAMESPACE_HEADER_KEY, TemporalServiceClient,
+     metrics::namespace_kv,
+     retry::make_future_retry,
+-    worker::{ClientWorkerSet, Slot},
++    worker::{ActivitySlot, ClientWorkerSet, Slot},
+ };
+ use dyn_clone::DynClone;
+ use futures_util::{FutureExt, TryFutureExt, future::BoxFuture};
+@@ -1657,8 +1657,31 @@
+         StartActivityExecutionRequest,
+         StartActivityExecutionResponse,
+         |r| {
+-            let labels = namespaced_request!(r);
+-            r.extensions_mut().insert(labels);
++            let mut labels = namespaced_request!(r);
++            labels.task_q(r.get_ref().task_queue.clone());
++            r.extensions_mut().insert(labels);
++        },
++        |r, workers| {
++            let req = r.get_mut();
++            let mut slot: Option<Box<dyn ActivitySlot + Send>> = None;
++            if req.request_eager_execution {
++                if let Some(workers) = workers {
++                    slot = workers.try_reserve_activity_slot(req.namespace.clone(), req.task_queue.as_ref().map(|queue| queue.name.clone()).unwrap_or_default());
++                    // Only the outer client owns a registry. Inner service proxies
++                    // must preserve an eager request already backed by that slot.
++                    if slot.is_none() { req.request_eager_execution = false; }
++                }
++            }
++            slot
++        },
++        |resp, slot| {
++            if let Some(slot) = slot
++                && let Ok(response) = resp.as_ref()
++                && let Some(task) = response.get_ref().clone().eager_activity_task
++                && let Err(error) = slot.schedule_activity(task) {
++                warn!(details = ?error, "Eager standalone Activity rejected by worker.");
++            }
++            resp
+         }
+     );
+     (
+--- a/crates/sdk-core/src/worker/mod.rs
++++ b/crates/sdk-core/src/worker/mod.rs
+@@ -855,6 +855,7 @@
+         // client-worker registrator can resolve it lazily (the activity task manager doesn't
+         // exist until the pollers are built).
+         let cancel_activity_slot: Arc<OnceLock<CancelActivityCallback>> = Arc::new(OnceLock::new());
++        let eager_activity_slot = Arc::new(OnceLock::<activities::ActivitiesFromWFTsHandle>::new());
+ 
+         let deployment_options = match &config.versioning_strategy {
+             WorkerVersioningStrategy::WorkerDeploymentBased(opts) => Some(opts.clone()),
+@@ -901,6 +902,7 @@
+             slot_provider: provider,
+             heartbeat_manager: worker_heartbeat,
+             cancel_activity_slot: cancel_activity_slot.clone(),
++            eager_activity_slot: eager_activity_slot.clone(),
+             client: RwLock::new(client.clone()),
+             namespace_description,
+             shared_namespace_worker,
+@@ -1076,6 +1078,13 @@
+ 
+                 if let Some(mgr) = &at_task_mgr {
+                     let _ = cancel_activity_slot.set(mgr.cancel_activity_callback());
++                    // A direct inline task bypasses both server and worker poll rate limits.
++                    // Fall back to polling whenever either limiter is configured.
++                    if config.max_task_queue_activities_per_second.is_none()
++                        && config.max_worker_activities_per_second.is_none()
++                        && matches!(&config.versioning_strategy, WorkerVersioningStrategy::None { .. }) {
++                        let _ = eager_activity_slot.set(mgr.get_handle_for_workflows());
++                    }
+                 }
+ 
+                 let nexus_mgr = nexus_poller.map(|poller| {
+@@ -2210,6 +2219,7 @@
+     /// Slot filled by the deferred poller build with the activity cancellation callback. Shared
+     /// with the worker so it can be resolved lazily once the activity task manager is constructed.
+     cancel_activity_slot: Arc<OnceLock<CancelActivityCallback>>,
++    eager_activity_slot: Arc<OnceLock<activities::ActivitiesFromWFTsHandle>>,
+     client: RwLock<Arc<dyn WorkerClient>>,
+     namespace_description: Arc<NamespaceDescriptionSource>,
+     shared_namespace_worker: bool,
+@@ -2226,6 +2236,10 @@
+ 
+     fn try_reserve_wft_slot(&self) -> Option<Box<dyn SlotTrait + Send>> {
+         self.slot_provider.try_reserve_wft_slot()
++    }
++
++    fn try_reserve_activity_slot(&self) -> Option<Box<dyn temporalio_client::worker::ActivitySlot + Send>> {
++        self.eager_activity_slot.get()?.reserve_standalone_slot()
+     }
+ 
+     fn deployment_options(&self) -> Option<temporalio_common::worker::WorkerDeploymentOptions> {
+--- a/crates/sdk-core/src/worker/activities.rs
++++ b/crates/sdk-core/src/worker/activities.rs
+@@ -853,12 +853,31 @@
+ 
+ /// Provides facilities for the workflow side of things to interact with the activity manager.
+ /// Allows for the handling of activities returned by WFT completions.
++#[derive(Clone)]
+ pub(crate) struct ActivitiesFromWFTsHandle {
+     sem: Arc<ClosableMeteredPermitDealer<ActivitySlotKind>>,
+     tx: UnboundedSender<TrackedPermittedTqResp<PollActivityTaskQueueResponse>>,
+ }
+ 
++struct StandaloneActivitySlot {
++    permit: TrackedOwnedMeteredSemPermit<ActivitySlotKind>,
++    tx: UnboundedSender<TrackedPermittedTqResp<PollActivityTaskQueueResponse>>,
++}
++
++impl temporalio_client::worker::ActivitySlot for StandaloneActivitySlot {
++    fn schedule_activity(self: Box<Self>, task: PollActivityTaskQueueResponse) -> Result<(), anyhow::Error> {
++        if task.task_token.is_empty() { anyhow::bail!("Eager Activity response has no task token"); }
++        self.tx.send(TrackedPermittedTqResp { permit: self.permit, resp: task })
++            .map_err(|_| anyhow::anyhow!("Activity worker stopped before eager task dispatch"))?;
++        Ok(())
++    }
++}
++
+ impl ActivitiesFromWFTsHandle {
++    pub(crate) fn reserve_standalone_slot(&self) -> Option<Box<dyn temporalio_client::worker::ActivitySlot + Send>> {
++        Some(Box::new(StandaloneActivitySlot { permit: self.reserve_slot()?, tx: self.tx.clone() }))
++    }
++
+     /// Returns a handle that can be used to reserve an activity slot. EX: When requesting eager
+     /// dispatch of an activity to this worker upon workflow task completion
+     pub(crate) fn reserve_slot(&self) -> Option<TrackedOwnedMeteredSemPermit<ActivitySlotKind>> {

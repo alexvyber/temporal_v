@@ -1,0 +1,29 @@
+--- a/crates/sdk-core/src/worker/mod.rs
++++ b/crates/sdk-core/src/worker/mod.rs
+@@ -900,6 +900,7 @@
+         let client_worker_registrator = Arc::new(ClientWorkerRegistrator {
+             worker_instance_key,
+             slot_provider: provider,
++            legacy_versioning: matches!(&config.versioning_strategy, WorkerVersioningStrategy::LegacyBuildIdBased { .. }),
+             heartbeat_manager: worker_heartbeat,
+             cancel_activity_slot: cancel_activity_slot.clone(),
+             eager_activity_slot: eager_activity_slot.clone(),
+@@ -2215,6 +2216,7 @@
+ struct ClientWorkerRegistrator {
+     worker_instance_key: Uuid,
+     slot_provider: SlotProvider,
++    legacy_versioning: bool,
+     heartbeat_manager: Option<WorkerHeartbeatManager>,
+     /// Slot filled by the deferred poller build with the activity cancellation callback. Shared
+     /// with the worker so it can be resolved lazily once the activity task manager is constructed.
+@@ -2235,6 +2237,10 @@
+     }
+ 
+     fn try_reserve_wft_slot(&self) -> Option<Box<dyn SlotTrait + Send>> {
++        // Eager start has no legacy build-ID stamp, so matching cannot enforce compatibility.
++        if self.legacy_versioning {
++            return None;
++        }
+         self.slot_provider.try_reserve_wft_slot()
+     }
+ 

@@ -1,0 +1,142 @@
+--- a/crates/sdk-core-c-bridge/src/client.rs
++++ b/crates/sdk-core-c-bridge/src/client.rs
+@@ -45,6 +45,8 @@
+     pub grpc_override_callback: ClientGrpcOverrideCallback,
+     /// Optional user data passed to each callback call.
+     pub grpc_override_callback_user_data: *mut libc::c_void,
++    /// Released after callback client/future references are gone, including failed connects.
++    pub grpc_override_callback_user_data_free: ClientGrpcOverrideUserDataFreeCallback,
+     /// If non-null, DNS-based load balancing is enabled. When the target URL resolves to multiple
+     /// addresses, requests are distributed across them and the address list is periodically
+     /// refreshed. If null, DNS load balancing is disabled. Ignored (forced off) when
+@@ -138,6 +140,11 @@
+     let runtime = unsafe { &*runtime };
+     // Convert opts
+     let options = unsafe { &*options };
++    // Option conversion can fail before a callback service is constructed.
++    let callback_user_data = options.grpc_override_callback.map(|_| Arc::new(GrpcOverrideUserData {
++        value: UserDataHandle(options.grpc_override_callback_user_data),
++        free: options.grpc_override_callback_user_data_free,
++    }));
+     let mut connection_options: temporalio_client::ConnectionOptions = match options.try_into() {
+         Ok(v) => v,
+         Err(err) => {
+@@ -158,7 +165,7 @@
+         connection_options.service_override = Some(create_callback_based_grpc_service(
+             runtime,
+             cb,
+-            options.grpc_override_callback_user_data,
++            callback_user_data.expect("callback data was created above"),
+         ));
+         connection_options.dns_load_balancing = None;
+     }
+@@ -192,10 +199,9 @@
+ fn create_callback_based_grpc_service(
+     runtime: &Runtime,
+     cb: unsafe extern "C" fn(request: *mut ClientGrpcOverrideRequest, user_data: *mut libc::c_void),
+-    user_data: *mut libc::c_void,
++    user_data: Arc<GrpcOverrideUserData>,
+ ) -> callback_based::CallbackBasedGrpcService {
+     let runtime = runtime.clone();
+-    let user_data = Arc::new(UserDataHandle(user_data));
+     callback_based::CallbackBasedGrpcService {
+         callback: Arc::new(move |req| {
+             let runtime = runtime.clone();
+@@ -235,7 +241,7 @@
+                         reached_user_code_clone.store(true, Ordering::Relaxed);
+                         cb(
+                             req_ptr as *mut ClientGrpcOverrideRequest,
+-                            user_data.clone().0,
++                            user_data.value.0,
+                         );
+                     })
+                     .await;
+@@ -308,6 +314,21 @@
+ pub type ClientGrpcOverrideCallback = Option<
+     unsafe extern "C" fn(request: *mut ClientGrpcOverrideRequest, user_data: *mut libc::c_void),
+ >;
++
++pub type ClientGrpcOverrideUserDataFreeCallback = Option<unsafe extern "C" fn(user_data: *mut libc::c_void)>;
++
++struct GrpcOverrideUserData {
++    value: UserDataHandle,
++    free: ClientGrpcOverrideUserDataFreeCallback,
++}
++
++impl Drop for GrpcOverrideUserData {
++    fn drop(&mut self) {
++        if let Some(free) = self.free {
++            unsafe { free(self.value.0) };
++        }
++    }
++}
+ 
+ pub struct GrpcMetadataHolder {
+     pub data: Vec<ByteArrayRef>,
+@@ -413,6 +434,14 @@
+ ) -> ByteArrayRef {
+     let req = unsafe { &*req };
+     (&*req.core.proto).into()
++}
++
++/// A dropped receiver means the RPC was cancelled or its deadline expired.
++#[unsafe(no_mangle)]
++pub extern "C" fn temporal_core_client_grpc_override_request_is_cancelled(
++    req: *const ClientGrpcOverrideRequest,
++) -> bool {
++    req.is_null() || unsafe { &*req }.response_sender.is_closed()
+ }
+ 
+ /// Complete the request, freeing all request data.
+@@ -1595,6 +1624,7 @@
+             http_connect_proxy_options: std::ptr::null(),
+             grpc_override_callback: None,
+             grpc_override_callback_user_data: std::ptr::null_mut(),
++            grpc_override_callback_user_data_free: None,
+             dns_load_balancing_options: std::ptr::null(),
+             grpc_compression: ClientGrpcCompression::Gzip,
+             payloads_warn_size: 0,
+--- a/crates/sdk-core-c-bridge/src/tests/context.rs
++++ b/crates/sdk-core-c-bridge/src/tests/context.rs
+@@ -367,6 +367,7 @@
+             dns_load_balancing_options: pointer_or_null(dns_load_balancing_options.as_deref()),
+             grpc_override_callback,
+             grpc_override_callback_user_data,
++            grpc_override_callback_user_data_free: None,
+             grpc_compression: match options.grpc_compression {
+                 temporalio_client::GrpcCompression::None => {
+                     crate::client::ClientGrpcCompression::None
+--- a/crates/sdk-core-c-bridge/include/temporal-sdk-core-c-bridge.h
++++ b/crates/sdk-core-c-bridge/include/temporal-sdk-core-c-bridge.h
+@@ -174,6 +174,8 @@
+ typedef void (*TemporalCoreClientGrpcOverrideCallback)(struct TemporalCoreClientGrpcOverrideRequest *request,
+                                                        void *user_data);
+ 
++typedef void (*TemporalCoreClientGrpcOverrideUserDataFreeCallback)(void *user_data);
++
+ typedef struct TemporalCoreClientDnsLoadBalancingOptions {
+   /**
+    * How often, in milliseconds, to re-resolve DNS.
+@@ -208,6 +210,10 @@
+    * Optional user data passed to each callback call.
+    */
+   void *grpc_override_callback_user_data;
++  /**
++   * Released after callback client/future references are gone, including failed connects.
++   */
++  TemporalCoreClientGrpcOverrideUserDataFreeCallback grpc_override_callback_user_data_free;
+   /**
+    * If non-null, DNS-based load balancing is enabled. When the target URL resolves to multiple
+    * addresses, requests are distributed across them and the address list is periodically
+@@ -1019,6 +1025,11 @@
+ struct TemporalCoreByteArrayRef temporal_core_client_grpc_override_request_proto(const struct TemporalCoreClientGrpcOverrideRequest *req);
+ 
+ /**
++ * A dropped receiver means the RPC was cancelled or its deadline expired.
++ */
++bool temporal_core_client_grpc_override_request_is_cancelled(const struct TemporalCoreClientGrpcOverrideRequest *req);
++
++/**
+  * Complete the request, freeing all request data.
+  *
+  * The data referenced in the response must live until this function returns. Once this call is

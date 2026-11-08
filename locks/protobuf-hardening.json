@@ -1,0 +1,31 @@
+{
+  "upstream_revision": "64811280130b2b4bda45eba707512412ace968ad",
+  "prerequisites": [
+    "patches/oneof-case-names.patch",
+    "scripts/codegen/protobuf-deprecated-fields.patch"
+  ],
+  "before": {
+    "decoder.v": "0794c39671fb313b1722b9436f9b3e57e74c0a477a4e5c0961659c35be5b81d6",
+    "gen/codegen.v": "687c0423397475e2929c39811fdda585dc4a2fc810da6ba4da7cdd4fac97ea3d",
+    "gen/codegen_test.v": "5df87c7a86450b629bfabe470bc5fbebec5ea3ef5ac79769f50360fb134fcf5f",
+    "gen/json.v": "b6f0c8a919fb0429a9e0fbb62be834a7b3cc0d5658c3edba72b0dbf1d8bfe64c",
+    "gen/json_test.v": "553d4e6459d3bcdfc59d6adb1d31a1f50cb250a46b750528bc6f897cffde4754",
+    "gen/loader_test.v": "3969cd05ebb4da2c4b6dc1c061a4882790ea39f3b8a6017bc9daa920354a3a95",
+    "json_util.v": "97e2ca8021b512015d06d4d4be9d9ea1b652984201da5c4e5ac9d66cfa496588",
+    "json_util_test.v": "6c35485d569f8ecb16d38466a88688177a3592645cee7223985fb0487223dedc",
+    "wire.v": "f55351da442b02939e85fdc4a8106880b928fd6b4c8928b57444543efa56caba",
+    "wire_test.v": "edc5873d354e12db2b3e4ce0409db9799811c76812aec2957ce59e2dc52d7e26"
+  },
+  "after": {
+    "decoder.v": "f2ef33a0865a9637219c9f42d3a44bd7561d7f04819fe8a3d714296dc4b4158e",
+    "gen/codegen.v": "53c349869b24108f07384b8f788101d4d2b8634d8ef6802da6a97c4e86d98e38",
+    "gen/codegen_test.v": "10c687a81847c593951e6e32f99605a7f8d86b9e21b25d3a3ba96d81ef7781f0",
+    "gen/json.v": "4aae34d4e0ef283b559e4e144e6ee357946bc994b38c496f2f7b7413b6ae8191",
+    "gen/json_test.v": "f2e99bb0e81b91966ed7d065b7b0f1078eaba359ae279d9799414ed72db0f9ac",
+    "gen/loader_test.v": "8d7ed01c39b4b8d3d4cfe9f4ffa87f5b7688bcee211a6fff8190bb65c94a0a5b",
+    "json_util.v": "d5bc1e3945e7c5ef84aec81958f9831e53fe915a5dec3aa0cb3ff1b291b18ba6",
+    "json_util_test.v": "a4f43a317a264a906d0a5442122b9c68d53fe2e92e42a3e2edeab2eaecc62616",
+    "wire.v": "15ef2e3418d6775fedf92b529f10ac73801f182a7824e8705703285b0840a9b4",
+    "wire_test.v": "51cd57eac0d18cd63b784d4576b021c919006f9ee55e1cdf7b7ba2e67859869e"
+  }
+}

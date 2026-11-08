@@ -1,0 +1,57 @@
+--- a/crates/sdk-core-c-bridge/src/metric.rs
++++ b/crates/sdk-core-c-bridge/src/metric.rs
+@@ -254,6 +254,7 @@
+ }
+ 
+ pub type CustomMetricMeterMetricNewCallback = unsafe extern "C" fn(
++    meter: *const CustomMetricMeter,
+     name: ByteArrayRef,
+     description: ByteArrayRef,
+     unit: ByteArrayRef,
+@@ -275,6 +276,7 @@
+ );
+ 
+ pub type CustomMetricMeterAttributesNewCallback = unsafe extern "C" fn(
++    meter: *const CustomMetricMeter,
+     append_from: *const libc::c_void,
+     attributes: *const CustomMetricAttribute,
+     attributes_size: libc::size_t,
+@@ -447,7 +449,7 @@
+                     }
+                 })
+                 .collect();
+-            let raw_attrs = (meter.attributes_new)(append_from, attrs.as_ptr(), attrs.len());
++            let raw_attrs = (meter.attributes_new)(self.meter_impl.0, append_from, attrs.as_ptr(), attrs.len());
+             // This is just to confirm we don't move the attribute by accident
+             // above before the callback is called
+             let _ = attribs;
+@@ -462,6 +464,7 @@
+         unsafe {
+             let meter = &*(self.meter_impl.0);
+             let metric = (meter.metric_new)(
++                self.meter_impl.0,
+                 params.name.as_ref().into(),
+                 params.description.as_ref().into(),
+                 params.unit.as_ref().into(),
+--- a/crates/sdk-core-c-bridge/include/temporal-sdk-core-c-bridge.h
++++ b/crates/sdk-core-c-bridge/include/temporal-sdk-core-c-bridge.h
+@@ -459,7 +459,8 @@
+   TemporalCoreNewlineDelimitedMapRef histogram_bucket_overrides;
+ } TemporalCorePrometheusOptions;
+ 
+-typedef const void *(*TemporalCoreCustomMetricMeterMetricNewCallback)(struct TemporalCoreByteArrayRef name,
++typedef const void *(*TemporalCoreCustomMetricMeterMetricNewCallback)(const struct TemporalCoreCustomMetricMeter *meter,
++                                                                      struct TemporalCoreByteArrayRef name,
+                                                                       struct TemporalCoreByteArrayRef description,
+                                                                       struct TemporalCoreByteArrayRef unit,
+                                                                       enum TemporalCoreMetricKind kind);
+@@ -496,7 +497,8 @@
+   enum TemporalCoreMetricAttributeValueType value_type;
+ } TemporalCoreCustomMetricAttribute;
+ 
+-typedef const void *(*TemporalCoreCustomMetricMeterAttributesNewCallback)(const void *append_from,
++typedef const void *(*TemporalCoreCustomMetricMeterAttributesNewCallback)(const struct TemporalCoreCustomMetricMeter *meter,
++                                                                          const void *append_from,
+                                                                           const struct TemporalCoreCustomMetricAttribute *attributes,
+                                                                           size_t attributes_size);
+ 

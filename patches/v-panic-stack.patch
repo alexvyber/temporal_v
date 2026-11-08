@@ -1,0 +1,96 @@
+--- a/vlib/builtin/recover.c.v
++++ b/vlib/builtin/recover.c.v
+@@ -27,6 +27,8 @@
+ 	// msg lives on the C heap: the only reference to it is in thread-local
+ 	// storage, which the GC does not scan.
+ 	msg string
++	// Original native stack, also on the C heap because TLS is not GC-scanned.
++	stack_trace string
+ 	// debug holds what panic_debug() prints for the panic, when it raised it.
+ 	debug PanicDebugInfo
+ 	// frame is the frame whose deferred block runs because of this panic.
+@@ -172,6 +174,7 @@
+ 	mut rec := panic_record(g_panic_state.len)
+ 	unsafe {
+ 		C.free(rec.msg.str)
++		if rec.stack_trace.len > 0 { C.free(rec.stack_trace.str) }
+ 		*rec = PanicRecord{}
+ 	}
+ 	// Nothing frees the records when their thread ends, so they go with the
+@@ -221,12 +224,13 @@
+ 	mut rec := panic_record(g_panic_state.len)
+ 	unsafe {
+ 		*rec = PanicRecord{
+-			msg:   string{
++			msg:         string{
+ 				str:    msg_copy
+ 				len:    msg.len
+ 				is_lit: 1
+ 			}
+-			debug: debug
++			stack_trace: panic_capture_stack()
++			debug:       debug
+ 		}
+ 	}
+ 	g_panic_state.len++
+@@ -279,4 +283,60 @@
+ 		}
+ 	}
+ 	panic(msg)
++}
++
++// recovered_panic_stack_trace returns an owned copy of the original native stack.
++// Call immediately after a successful recover() in its deferred block. It returns
++// an empty string outside recovery or when native backtraces are unavailable.
++pub fn recovered_panic_stack_trace() string {
++	if g_panic_state.len == 0 { return '' }
++	rec := panic_record(g_panic_state.len - 1)
++	if !rec.recovered || rec.aborted { return '' }
++	return rec.stack_trace.clone()
++}
++
++// Capture before longjmp discards the callback frames. Keep this bounded and
++// entirely on the C heap: allocation failure must not recursively panic.
++@[noinline]
++fn panic_capture_stack() string {
++	$if (linux || macos) && !no_backtrace ? {
++		mut frames := [64]voidptr{}
++		count := C.backtrace(&frames[0], 64)
++		if count <= 0 { return '' }
++		// backtrace gives return addresses. At the end of a noreturn callback,
++		// that address can equal the next symbol's start. Resolve the callsite
++		// byte instead, preserving the original callback's symbol in optimized builds.
++		for index in 1 .. count {
++			if frames[index] != unsafe { nil } {
++				frames[index] = unsafe { voidptr(u64(frames[index]) - 1) }
++			}
++		}
++		symbols := C.backtrace_symbols(&frames[0], count)
++		if symbols == unsafe { nil } { return '' }
++		buffer := unsafe { &u8(C.malloc(16384)) }
++		if buffer == unsafe { nil } {
++			unsafe { C.free(symbols) }
++			return ''
++		}
++		mut used := 0
++		for index in 0 .. count {
++			line := unsafe { &u8(symbols[index]) }
++			if line == unsafe { nil } { continue }
++			mut offset := 0
++			for used < 16382 && unsafe { line[offset] } != 0 {
++				unsafe { buffer[used] = line[offset] }
++				used++
++				offset++
++			}
++			unsafe { buffer[used] = `\n` }
++			used++
++			if used >= 16382 { break }
++		}
++		unsafe {
++			C.free(symbols)
++			buffer[used] = 0
++		}
++		return unsafe { string{ str: buffer, len: used, is_lit: 1 } }
++	}
++	return ''
+ }

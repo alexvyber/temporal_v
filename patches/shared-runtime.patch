@@ -1,0 +1,93 @@
+--- a/crates/sdk-core-c-bridge/src/runtime.rs
++++ b/crates/sdk-core-c-bridge/src/runtime.rs
+@@ -253,7 +253,7 @@
+         Err(err) => {
+             // We have to make an empty runtime just for the failure to be
+             // freeable
+-            let mut runtime = Runtime {
++            let runtime = Runtime {
+                 core: Arc::new(
+                     CoreRuntime::new(CoreRuntimeOptions::default(), TokioRuntime::default())
+                         .unwrap(),
+@@ -291,7 +291,7 @@
+     unsafe { (*bytes).data = std::ptr::null_mut() };
+     // Return only if runtime is non-null
+     if !runtime.is_null() {
+-        let runtime = unsafe { &mut *runtime };
++        let runtime = unsafe { &*runtime };
+         runtime.return_buf(vec);
+     }
+     unsafe {
+@@ -390,18 +390,18 @@
+         Ok(runtime)
+     }
+ 
+-    fn borrow_buf(&mut self) -> Vec<u8> {
++    fn borrow_buf(&self) -> Vec<u8> {
+         // We currently do not use a thread-safe byte pool, but if wanted, it
+         // can be added here
+         Vec::new()
+     }
+ 
+-    fn return_buf(&mut self, _vec: Vec<u8>) {
++    fn return_buf(&self, _vec: Vec<u8>) {
+         // We currently do not use a thread-safe byte pool, but if wanted, it
+         // can be added here
+     }
+ 
+-    pub fn alloc_utf8(&mut self, v: &str) -> ByteArray {
++    pub fn alloc_utf8(&self, v: &str) -> ByteArray {
+         let mut buf = self.borrow_buf();
+         buf.clear();
+         buf.extend_from_slice(v.as_bytes());
+--- a/crates/sdk-core-c-bridge/src/client.rs
++++ b/crates/sdk-core-c-bridge/src/client.rs
+@@ -135,7 +135,7 @@
+     user_data: *mut libc::c_void,
+     callback: ClientConnectCallback,
+ ) {
+-    let runtime = unsafe { &mut *runtime };
++    let runtime = unsafe { &*runtime };
+     // Convert opts
+     let options = unsafe { &*options };
+     let mut connection_options: temporalio_client::ConnectionOptions = match options.try_into() {
+--- a/crates/sdk-core-c-bridge/src/metric.rs
++++ b/crates/sdk-core-c-bridge/src/metric.rs
+@@ -8,7 +8,7 @@
+ 
+ #[unsafe(no_mangle)]
+ pub extern "C" fn temporal_core_metric_meter_new(runtime: *mut Runtime) -> *mut MetricMeter {
+-    let runtime = unsafe { &mut *runtime };
++    let runtime = unsafe { &*runtime };
+     if let Some(core) = runtime.core.telemetry().get_metric_meter() {
+         Box::into_raw(Box::new(MetricMeter { core }))
+     } else {
+--- a/crates/sdk-core-c-bridge/src/worker.rs
++++ b/crates/sdk-core-c-bridge/src/worker.rs
+@@ -599,7 +599,7 @@
+     connection: *mut Connection,
+     options: *const WorkerOptions,
+ ) -> WorkerOrFail {
+-    let connection = unsafe { &mut *connection };
++    let connection = unsafe { &*connection };
+     enter_sync!(connection.runtime);
+     let options = unsafe { &*options };
+ 
+@@ -1036,7 +1036,7 @@
+     runtime: *mut Runtime,
+     options: *const WorkerOptions,
+ ) -> WorkerReplayerOrFail {
+-    let runtime = unsafe { &mut *runtime };
++    let runtime = unsafe { &*runtime };
+     enter_sync!(runtime);
+     let options = unsafe { &*options };
+ 
+@@ -1097,7 +1097,7 @@
+     workflow_id: ByteArrayRef,
+     history: ByteArrayRef,
+ ) -> WorkerReplayPushResult {
+-    let worker = unsafe { &mut *worker };
++    let worker = unsafe { &*worker };
+     let worker_replay_pusher = unsafe { &*worker_replay_pusher };
+     let workflow_id = workflow_id.to_string();
+     match History::decode(history.to_slice()) {

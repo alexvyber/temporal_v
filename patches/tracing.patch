@@ -1,0 +1,880 @@
+diff --git a/crates/common/src/telemetry/otel.rs b/crates/common/src/telemetry/otel.rs
+--- a/crates/common/src/telemetry/otel.rs
++++ b/crates/common/src/telemetry/otel.rs
+@@ -19,7 +19,7 @@
+ };
+ #[cfg(any(feature = "tls-ring", feature = "tls-aws-lc"))]
+ use opentelemetry_otlp::tonic_types::transport::ClientTlsConfig;
+-use opentelemetry_otlp::{WithExportConfig, WithHttpConfig, WithTonicConfig};
++use opentelemetry_otlp::{Protocol, WithExportConfig, WithHttpConfig, WithTonicConfig};
+ use opentelemetry_sdk::{
+     Resource,
+     error::OTelSdkResult,
+@@ -182,6 +182,8 @@
+         }
+         OtlpProtocol::Http => opentelemetry_otlp::MetricExporter::builder()
+             .with_http()
++            // Trace HTTP/JSON support must not change the metrics wire protocol.
++            .with_protocol(Protocol::HttpBinary)
+             .with_endpoint(opts.url.to_string())
+             .with_headers(opts.headers)
+             .with_temporality(metric_temporality_to_temporality(opts.metric_temporality))
+diff --git a/crates/sdk-core-c-bridge/Cargo.toml b/crates/sdk-core-c-bridge/Cargo.toml
+--- a/crates/sdk-core-c-bridge/Cargo.toml
++++ b/crates/sdk-core-c-bridge/Cargo.toml
+@@ -23,6 +23,13 @@
+ http = "1.3"
+ libc = "0.2"
+ prost = { workspace = true }
++opentelemetry = { workspace = true, features = ["trace"] }
++opentelemetry_sdk = { version = "0.32", default-features = false, features = ["trace", "rt-tokio"] }
++opentelemetry-otlp = { version = "0.32", default-features = false, features = ["trace", "tokio", "grpc-tonic", "http-proto", "http-json"] }
++# Enable the async HttpClient trait implementation without selecting OTLP's
++# async default globally. Core metrics' PeriodicReader needs its blocking client.
++opentelemetry-http = { version = "0.32", default-features = false, features = ["reqwest"] }
++reqwest = { version = "0.13", default-features = false }
+ # We rely on Cargo semver rules not updating a 0.x to 0.y. Per the rand
+ # documentation, before 1.0, minor 0.x updates _can_ break portability which can
+ # cause non-determinism.
+diff --git a/crates/sdk-core-c-bridge/include/temporal-sdk-core-c-bridge.h b/crates/sdk-core-c-bridge/include/temporal-sdk-core-c-bridge.h
+--- a/crates/sdk-core-c-bridge/include/temporal-sdk-core-c-bridge.h
++++ b/crates/sdk-core-c-bridge/include/temporal-sdk-core-c-bridge.h
+@@ -113,6 +113,8 @@
+ 
+ typedef struct TemporalCoreSlotReserveCompletionCtx TemporalCoreSlotReserveCompletionCtx;
+ 
++typedef struct TemporalCoreTraceExporter TemporalCoreTraceExporter;
++
+ typedef struct TemporalCoreWorker TemporalCoreWorker;
+ 
+ typedef struct TemporalCoreWorkerReplayPusher TemporalCoreWorkerReplayPusher;
+@@ -636,6 +638,11 @@
+ 
+ typedef void (*TemporalCoreEphemeralServerShutdownCallback)(void *user_data,
+                                                             const struct TemporalCoreByteArray *fail);
++
++typedef struct TemporalCoreTraceExporterOrFail {
++  struct TemporalCoreTraceExporter *exporter;
++  char *failure;
++} TemporalCoreTraceExporterOrFail;
+ 
+ /**
+  * Only runtime or fail will be non-null. Whichever is must be freed when done.
+@@ -973,8 +980,8 @@
+ #endif // __cplusplus
+ 
+ /**
+- * Language SDKs check this before polling so older libraries cannot silently
+- * discard serialized workflow commands that they do not understand.
++ * Language SDKs check required extensions before using their native APIs so
++ * older libraries cannot silently discard workflow commands or miss exporters.
+  */
+ uint64_t temporal_core_protocol_capabilities(void);
+ 
+@@ -1160,6 +1167,26 @@
+                                              void *user_data,
+                                              TemporalCoreEphemeralServerShutdownCallback callback);
+ 
++/**
++ * Configuration is copied; the exporter retains the runtime independently of its originating client.
++ */
++struct TemporalCoreTraceExporterOrFail temporal_core_trace_exporter_new(struct TemporalCoreRuntime *runtime,
++                                                                        struct TemporalCoreByteArrayRef config);
++
++/**
++ * Calls must occur on a language dispatcher, outside Tokio. Concurrent exports fail instead of waiting beyond their deadline.
++ */
++char *temporal_core_trace_exporter_export(struct TemporalCoreTraceExporter *exporter,
++                                          struct TemporalCoreByteArrayRef spans,
++                                          uint64_t timeout_millis);
++
++/**
++ * The language owner drains in-flight calls before freeing the exporter.
++ */
++void temporal_core_trace_exporter_free(struct TemporalCoreTraceExporter *exporter);
++
++void temporal_core_trace_string_free(char *value);
++
+ struct TemporalCoreWorkerOrFail temporal_core_worker_new(struct TemporalCoreConnection *connection,
+                                                          const struct TemporalCoreWorkerOptions *options);
+ 
+diff --git a/crates/sdk-core-c-bridge/src/lib.rs b/crates/sdk-core-c-bridge/src/lib.rs
+--- a/crates/sdk-core-c-bridge/src/lib.rs
++++ b/crates/sdk-core-c-bridge/src/lib.rs
+@@ -14,6 +14,7 @@
+ pub mod random;
+ pub mod runtime;
+ pub mod testing;
++pub mod trace;
+ pub mod worker;
+ 
+ #[cfg(test)]
+@@ -21,11 +22,11 @@
+ 
+ use std::collections::HashMap;
+ 
+-/// Language SDKs check this before polling so older libraries cannot silently
+-/// discard serialized workflow commands that they do not understand.
++/// Language SDKs check required extensions before using their native APIs so
++/// older libraries cannot silently discard workflow commands or miss exporters.
+ #[unsafe(no_mangle)]
+ pub extern "C" fn temporal_core_protocol_capabilities() -> u64 {
+-    1
++    3
+ }
+ 
+ #[repr(C)]
+diff --git a/crates/sdk-core-c-bridge/src/trace.rs b/crates/sdk-core-c-bridge/src/trace.rs
+--- /dev/null
++++ b/crates/sdk-core-c-bridge/src/trace.rs
+@@ -0,0 +1,750 @@
++//! Synchronous language-side export calls use Core's runtime for async OTLP I/O.
++
++use crate::{ByteArrayRef, runtime::Runtime};
++use opentelemetry::{
++    Array, InstrumentationScope, KeyValue, Value,
++    trace::{Event, Link, SpanContext, SpanId, SpanKind, Status, TraceFlags, TraceId, TraceState},
++};
++use opentelemetry_otlp::{Protocol, WithExportConfig, WithHttpConfig, WithTonicConfig};
++use opentelemetry_sdk::{
++    Resource,
++    trace::{SpanData, SpanEvents, SpanExporter, SpanLinks},
++};
++use serde::Deserialize;
++use std::{
++    collections::HashMap,
++    ffi::{CString, c_char},
++    str::FromStr,
++    sync::{Arc, Mutex},
++    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
++};
++use temporalio_sdk_core::{CoreRuntime, RuntimeOptions, TokioRuntimeBuilder};
++use tonic::metadata::{Ascii, MetadataKey, MetadataMap, MetadataValue};
++use url::Url;
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct ExportConfig {
++    endpoint: String,
++    protocol: String,
++    timeout_millis: u64,
++    service_name: String,
++    #[serde(default)]
++    headers: HashMap<String, String>,
++    #[serde(default)]
++    resource: HashMap<String, AttributeValue>,
++    #[serde(default)]
++    root_ca_cert: String,
++    #[serde(default)]
++    client_cert: String,
++    #[serde(default)]
++    client_key: String,
++}
++
++#[derive(Deserialize)]
++#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
++enum AttributeValue {
++    String(String),
++    Boolean(bool),
++    Integer(String),
++    Double(String),
++    StringArray(Vec<String>),
++    BooleanArray(Vec<bool>),
++    IntegerArray(Vec<String>),
++    DoubleArray(Vec<String>),
++}
++
++impl AttributeValue {
++    fn into_otel(self) -> Result<Value, String> {
++        Ok(match self {
++            Self::String(value) => Value::String(value.into()),
++            Self::Boolean(value) => Value::Bool(value),
++            Self::Integer(value) => Value::I64(value.parse().map_err(|_| "invalid trace integer")?),
++            Self::Double(value) => Value::F64(value.parse().map_err(|_| "invalid trace double")?),
++            Self::StringArray(values) => {
++                Value::Array(Array::String(values.into_iter().map(Into::into).collect()))
++            }
++            Self::BooleanArray(values) => Value::Array(Array::Bool(values)),
++            Self::IntegerArray(values) => Value::Array(Array::I64(
++                values
++                    .into_iter()
++                    .map(|value| {
++                        value
++                            .parse()
++                            .map_err(|_| "invalid trace integer array".to_owned())
++                    })
++                    .collect::<Result<_, _>>()?,
++            )),
++            Self::DoubleArray(values) => Value::Array(Array::F64(
++                values
++                    .into_iter()
++                    .map(|value| {
++                        value
++                            .parse()
++                            .map_err(|_| "invalid trace double array".to_owned())
++                    })
++                    .collect::<Result<_, _>>()?,
++            )),
++        })
++    }
++}
++
++fn attributes(values: HashMap<String, AttributeValue>) -> Result<Vec<KeyValue>, String> {
++    if values.len() > 1024 {
++        return Err("too many trace attributes".into());
++    }
++    values
++        .into_iter()
++        .map(|(name, value)| {
++            if name.is_empty() || name.len() > 1024 {
++                return Err("invalid trace attribute name".into());
++            }
++            Ok(KeyValue::new(name, value.into_otel()?))
++        })
++        .collect()
++}
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Context {
++    trace_id: String,
++    span_id: String,
++    #[serde(default)]
++    trace_flags: u8,
++    #[serde(default)]
++    trace_state: String,
++    #[serde(default)]
++    remote: bool,
++}
++
++impl Context {
++    fn into_otel(self) -> Result<SpanContext, String> {
++        let trace = TraceId::from_hex(&self.trace_id).map_err(|_| "invalid trace ID")?;
++        let span = SpanId::from_hex(&self.span_id).map_err(|_| "invalid span ID")?;
++        let state = TraceState::from_str(&self.trace_state).map_err(|_| "invalid trace state")?;
++        let context = SpanContext::new(
++            trace,
++            span,
++            TraceFlags::new(self.trace_flags),
++            self.remote,
++            state,
++        );
++        if !context.is_valid() {
++            return Err("trace context has a zero ID".into());
++        }
++        Ok(context)
++    }
++}
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct SpanEvent {
++    name: String,
++    unix_nanos: String,
++    #[serde(default)]
++    attributes: HashMap<String, AttributeValue>,
++    #[serde(default)]
++    dropped_attributes: u32,
++}
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct SpanLink {
++    context: Context,
++    #[serde(default)]
++    attributes: HashMap<String, AttributeValue>,
++    #[serde(default)]
++    dropped_attributes: u32,
++}
++
++#[derive(Deserialize)]
++#[serde(deny_unknown_fields)]
++struct Span {
++    context: Context,
++    scope_name: String,
++    scope_version: String,
++    #[serde(default)]
++    parent_span_id: String,
++    #[serde(default)]
++    parent_remote: bool,
++    name: String,
++    kind: u8,
++    start_unix_nanos: String,
++    end_unix_nanos: String,
++    #[serde(default)]
++    attributes: HashMap<String, AttributeValue>,
++    #[serde(default)]
++    events: Vec<SpanEvent>,
++    #[serde(default)]
++    links: Vec<SpanLink>,
++    #[serde(default)]
++    dropped_attributes: u32,
++    #[serde(default)]
++    dropped_events: u32,
++    #[serde(default)]
++    dropped_links: u32,
++    #[serde(default)]
++    status: u8,
++    #[serde(default)]
++    status_message: String,
++}
++
++fn timestamp(value: &str) -> Result<SystemTime, String> {
++    let nanos = value
++        .parse::<u64>()
++        .map_err(|_| "invalid trace timestamp")?;
++    UNIX_EPOCH
++        .checked_add(Duration::from_nanos(nanos))
++        .ok_or_else(|| "trace timestamp is out of range".into())
++}
++
++impl Span {
++    fn into_otel(self) -> Result<SpanData, String> {
++        if self.name.is_empty()
++            || self.name.len() > 4096
++            || self.scope_name.is_empty()
++            || self.scope_name.len() > 1024
++            || self.scope_version.len() > 1024
++            || self.events.len() > 1024
++            || self.links.len() > 1024
++        {
++            return Err("invalid trace span name or collection limits".into());
++        }
++        let start_time = timestamp(&self.start_unix_nanos)?;
++        let end_time = timestamp(&self.end_unix_nanos)?;
++        if end_time < start_time {
++            return Err("trace span ended before it started".into());
++        }
++        let span_kind = match self.kind {
++            0 => SpanKind::Internal,
++            1 => SpanKind::Server,
++            2 => SpanKind::Client,
++            3 => SpanKind::Producer,
++            4 => SpanKind::Consumer,
++            _ => return Err("invalid trace span kind".into()),
++        };
++        let status = match self.status {
++            0 => Status::Unset,
++            1 => Status::Ok,
++            2 => Status::error(self.status_message),
++            _ => return Err("invalid trace span status".into()),
++        };
++        let mut events = SpanEvents::default();
++        events.dropped_count = self.dropped_events;
++        for event in self.events {
++            if event.name.is_empty() || event.name.len() > 4096 {
++                return Err("invalid trace event name".into());
++            }
++            events.events.push(Event::new(
++                event.name,
++                timestamp(&event.unix_nanos)?,
++                attributes(event.attributes)?,
++                event.dropped_attributes,
++            ));
++        }
++        let mut links = SpanLinks::default();
++        links.dropped_count = self.dropped_links;
++        for link in self.links {
++            links.links.push(Link::new(
++                link.context.into_otel()?,
++                attributes(link.attributes)?,
++                link.dropped_attributes,
++            ));
++        }
++        Ok(SpanData {
++            span_context: self.context.into_otel()?,
++            parent_span_id: if self.parent_span_id.is_empty() {
++                SpanId::INVALID
++            } else {
++                SpanId::from_hex(&self.parent_span_id).map_err(|_| "invalid parent span ID")?
++            },
++            parent_span_is_remote: self.parent_remote,
++            span_kind,
++            name: self.name.into(),
++            start_time,
++            end_time,
++            attributes: attributes(self.attributes)?,
++            dropped_attributes_count: self.dropped_attributes,
++            events,
++            links,
++            status,
++            instrumentation_scope: InstrumentationScope::builder(self.scope_name)
++                .with_version(self.scope_version)
++                .build(),
++        })
++    }
++}
++
++pub struct TraceExporter {
++    exporter: opentelemetry_otlp::SpanExporter,
++    export_lock: Mutex<()>,
++    timeout: Duration,
++    core: Arc<CoreRuntime>,
++}
++
++#[repr(C)]
++pub struct TraceExporterOrFail {
++    pub exporter: *mut TraceExporter,
++    pub failure: *mut c_char,
++}
++
++fn failure(message: impl ToString) -> *mut c_char {
++    CString::new(message.to_string().replace('\0', "\\0"))
++        .expect("NUL bytes were escaped")
++        .into_raw()
++}
++
++fn input_json<T: serde::de::DeserializeOwned>(
++    input: ByteArrayRef,
++    maximum: usize,
++) -> Result<T, String> {
++    if input.size == 0 || input.size > maximum || input.data.is_null() {
++        return Err("invalid trace JSON buffer size".into());
++    }
++    serde_json::from_slice(input.to_slice()).map_err(|error| {
++        format!(
++            "invalid trace JSON at line {} column {}",
++            error.line(),
++            error.column()
++        )
++    })
++}
++
++fn create(core: Arc<CoreRuntime>, config: ExportConfig) -> Result<TraceExporter, String> {
++    if config.timeout_millis == 0
++        || config.timeout_millis > 300_000
++        || config.service_name.is_empty()
++        || config.service_name.len() > 1024
++    {
++        return Err("invalid trace exporter timeout or service name".into());
++    }
++    let endpoint = Url::parse(&config.endpoint).map_err(|_| "invalid trace exporter URL")?;
++    if !matches!(endpoint.scheme(), "http" | "https")
++        || endpoint.host_str().is_none()
++        || !endpoint.username().is_empty()
++        || endpoint.password().is_some()
++        || endpoint.fragment().is_some()
++    {
++        return Err("invalid trace exporter URL".into());
++    }
++    if config.client_cert.is_empty() != config.client_key.is_empty() {
++        return Err("trace client certificate and key must be supplied together".into());
++    }
++    let has_tls_material = !config.root_ca_cert.is_empty() || !config.client_cert.is_empty();
++    if has_tls_material && endpoint.scheme() != "https" {
++        return Err("trace TLS material requires an HTTPS endpoint".into());
++    }
++    if [
++        &config.root_ca_cert,
++        &config.client_cert,
++        &config.client_key,
++    ]
++    .iter()
++    .any(|value| value.len() > 512 * 1024)
++    {
++        return Err("trace TLS material exceeds the byte limit".into());
++    }
++    let timeout = Duration::from_millis(config.timeout_millis);
++    // Tracing can start before clients or metric exporters initialize TLS.
++    temporalio_common::telemetry::ensure_default_crypto_provider();
++    let handle = core.tokio_handle();
++    let _entered = handle.enter();
++    let mut exporter = match config.protocol.as_str() {
++        "grpc" => {
++            let mut metadata = MetadataMap::new();
++            for (name, value) in config.headers {
++                let key = MetadataKey::<Ascii>::from_str(&name)
++                    .map_err(|_| "invalid trace metadata key")?;
++                let value = MetadataValue::<Ascii>::try_from(value)
++                    .map_err(|_| "invalid trace metadata value")?;
++                metadata.insert(key, value);
++            }
++            let mut builder = opentelemetry_otlp::SpanExporter::builder()
++                .with_tonic()
++                .with_endpoint(config.endpoint)
++                .with_timeout(timeout)
++                .with_metadata(metadata);
++            if endpoint.scheme() == "https" {
++                let mut tls = tonic::transport::ClientTlsConfig::new().with_enabled_roots();
++                if !config.root_ca_cert.is_empty() {
++                    tls = tls.ca_certificate(tonic::transport::Certificate::from_pem(
++                        config.root_ca_cert,
++                    ));
++                }
++                if !config.client_cert.is_empty() {
++                    tls = tls.identity(tonic::transport::Identity::from_pem(
++                        config.client_cert,
++                        config.client_key,
++                    ));
++                }
++                builder = builder.with_tls_config(tls);
++            }
++            builder.build()
++        }
++        "http/protobuf" | "http/json" => {
++            let mut client = reqwest::Client::builder()
++                .timeout(timeout)
++                .connect_timeout(timeout)
++                .redirect(reqwest::redirect::Policy::none());
++            if !config.root_ca_cert.is_empty() {
++                let roots = reqwest::Certificate::from_pem_bundle(config.root_ca_cert.as_bytes())
++                    .map_err(|_| "invalid trace root certificate")?;
++                if roots.is_empty() {
++                    return Err("trace root certificate bundle is empty".into());
++                }
++                for certificate in roots {
++                    client = client.add_root_certificate(certificate);
++                }
++            }
++            if !config.client_cert.is_empty() {
++                let pem = format!("{}\n{}", config.client_cert, config.client_key);
++                let identity = reqwest::Identity::from_pem(pem.as_bytes())
++                    .map_err(|_| "invalid trace client identity")?;
++                client = client.identity(identity);
++            }
++            let client = client
++                .build()
++                .map_err(|_| "trace HTTP client initialization failed")?;
++            let protocol = if config.protocol == "http/json" {
++                Protocol::HttpJson
++            } else {
++                Protocol::HttpBinary
++            };
++            opentelemetry_otlp::SpanExporter::builder()
++                .with_http()
++                .with_endpoint(config.endpoint)
++                .with_timeout(timeout)
++                .with_protocol(protocol)
++                .with_headers(config.headers)
++                .with_http_client(client)
++                .build()
++        }
++        _ => return Err("unsupported trace export protocol".into()),
++    }
++    .map_err(|_| "trace exporter initialization failed")?;
++    let mut resource_attributes = attributes(config.resource)?;
++    resource_attributes.retain(|value| value.key.as_str() != "service.name");
++    resource_attributes.push(KeyValue::new("service.name", config.service_name));
++    exporter.set_resource(
++        &Resource::builder_empty()
++            .with_attributes(resource_attributes)
++            .build(),
++    );
++    drop(_entered);
++    Ok(TraceExporter {
++        core,
++        exporter,
++        export_lock: Mutex::new(()),
++        timeout,
++    })
++}
++
++/// Configuration is copied; the exporter retains the runtime independently of its originating client.
++#[unsafe(no_mangle)]
++pub extern "C" fn temporal_core_trace_exporter_new(
++    runtime: *mut Runtime,
++    config: ByteArrayRef,
++) -> TraceExporterOrFail {
++    let result = (|| {
++        if tokio::runtime::Handle::try_current().is_ok() {
++            return Err("trace exporter must be created outside Tokio".to_owned());
++        }
++        let config = input_json(config, 1_048_576)?;
++        let core = if runtime.is_null() {
++            let options = RuntimeOptions::builder()
++                .heartbeat_interval(None)
++                .disable_environment_info(true)
++                .build()
++                .map_err(|_| "trace runtime options are invalid".to_owned())?;
++            let mut builder = TokioRuntimeBuilder::default();
++            builder.inner.worker_threads(2);
++            Arc::new(
++                CoreRuntime::new(options, builder)
++                    .map_err(|_| "trace runtime initialization failed".to_owned())?,
++            )
++        } else {
++            unsafe { &*runtime }.core.clone()
++        };
++        create(core, config)
++    })();
++    match result {
++        Ok(exporter) => TraceExporterOrFail {
++            exporter: Box::into_raw(Box::new(exporter)),
++            failure: std::ptr::null_mut(),
++        },
++        Err(error) => TraceExporterOrFail {
++            exporter: std::ptr::null_mut(),
++            failure: failure(error),
++        },
++    }
++}
++
++/// Calls must occur on a language dispatcher, outside Tokio. Concurrent exports fail instead of waiting beyond their deadline.
++#[unsafe(no_mangle)]
++pub extern "C" fn temporal_core_trace_exporter_export(
++    exporter: *mut TraceExporter,
++    spans: ByteArrayRef,
++    timeout_millis: u64,
++) -> *mut c_char {
++    let started = Instant::now();
++    let result = (|| {
++        if exporter.is_null()
++            || timeout_millis == 0
++            || tokio::runtime::Handle::try_current().is_ok()
++        {
++            return Err("invalid trace export caller or timeout".into());
++        }
++        let exporter = unsafe { &*exporter };
++        let _guard = exporter
++            .export_lock
++            .try_lock()
++            .map_err(|_| "trace exporter is already exporting")?;
++        let spans: Vec<Span> = input_json(spans, 8 * 1_048_576)?;
++        if spans.is_empty() || spans.len() > 1024 {
++            return Err("invalid trace export batch size".into());
++        }
++        let batch = spans
++            .into_iter()
++            .map(Span::into_otel)
++            .collect::<Result<Vec<_>, _>>()?;
++        let timeout = Duration::from_millis(timeout_millis)
++            .min(exporter.timeout)
++            .checked_sub(started.elapsed())
++            .ok_or("trace export deadline exceeded")?;
++        exporter.core.tokio_handle().block_on(async {
++            tokio::time::timeout(timeout, exporter.exporter.export(batch))
++                .await
++                .map_err(|_| "trace export deadline exceeded".to_owned())?
++                .map_err(|_| "OTLP trace export failed".to_owned())
++        })
++    })();
++    match result {
++        Ok(()) => std::ptr::null_mut(),
++        Err(error) => failure(error),
++    }
++}
++
++/// The language owner drains in-flight calls before freeing the exporter.
++#[unsafe(no_mangle)]
++pub extern "C" fn temporal_core_trace_exporter_free(exporter: *mut TraceExporter) {
++    if !exporter.is_null() {
++        drop(unsafe { Box::from_raw(exporter) });
++    }
++}
++
++#[unsafe(no_mangle)]
++pub extern "C" fn temporal_core_trace_string_free(value: *mut c_char) {
++    if !value.is_null() {
++        drop(unsafe { CString::from_raw(value) });
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use serde_json::json;
++    use std::ffi::CStr;
++
++    fn span() -> serde_json::Value {
++        json!({
++            "context": {"trace_id":"1234567890abcdef1234567890abcdef", "span_id":"1234567890abcdef", "trace_flags":3, "trace_state":"vendor=value"},
++            "scope_name":"language-sdk", "scope_version":"2.3.4",
++            "name":"recorded span", "kind":2,
++            "start_unix_nanos":"1794000000000000001", "end_unix_nanos":"1794000000001234567",
++            "attributes":{
++                "minimum":{"kind":"integer","value":"-9223372036854775808"},
++                "maximum":{"kind":"integer","value":"9223372036854775807"},
++                "array":{"kind":"integer_array","value":["-9223372036854775808","9223372036854775807"]}
++            },
++            "events":[{"name":"event","unix_nanos":"1794000000000000002","dropped_attributes":2}],
++            "links":[{"context":{"trace_id":"abcdef1234567890abcdef1234567890","span_id":"abcdef1234567890","remote":true},"dropped_attributes":1}],
++            "dropped_attributes":3,"dropped_events":4,"dropped_links":5,"status":2,"status_message":"fixture error"
++        })
++    }
++
++    #[test]
++    fn language_span_preserves_scope_integer_extremes_and_nested_diagnostics() {
++        let parsed: Span = serde_json::from_value(span()).unwrap();
++        let parsed = parsed.into_otel().unwrap();
++        assert_eq!(parsed.instrumentation_scope.name(), "language-sdk");
++        assert_eq!(parsed.instrumentation_scope.version(), Some("2.3.4"));
++        assert!(parsed.span_context.is_sampled());
++        assert_eq!(parsed.span_context.trace_state().header(), "vendor=value");
++        let values: HashMap<_, _> = parsed
++            .attributes
++            .into_iter()
++            .map(|value| (value.key.to_string(), value.value))
++            .collect();
++        assert_eq!(values["minimum"], Value::I64(i64::MIN));
++        assert_eq!(values["maximum"], Value::I64(i64::MAX));
++        assert_eq!(
++            values["array"],
++            Value::Array(Array::I64(vec![i64::MIN, i64::MAX]))
++        );
++        assert_eq!(
++            (
++                parsed.dropped_attributes_count,
++                parsed.events.dropped_count,
++                parsed.links.dropped_count
++            ),
++            (3, 4, 5)
++        );
++        assert_eq!(parsed.events.events[0].dropped_attributes_count, 2);
++        assert_eq!(parsed.links.links[0].dropped_attributes_count, 1);
++        assert!(parsed.links.links[0].span_context.is_remote());
++        assert_eq!(parsed.status, Status::error("fixture error"));
++    }
++
++    #[test]
++    fn malformed_span_identity_ranges_and_order_fail_before_export() {
++        for case in [
++            "zero-trace",
++            "zero-span",
++            "kind",
++            "scope",
++            "end",
++            "timestamp",
++            "integer",
++        ] {
++            let mut input = span();
++            match case {
++                "zero-trace" => {
++                    input["context"]["trace_id"] = json!("00000000000000000000000000000000")
++                }
++                "zero-span" => input["context"]["span_id"] = json!("0000000000000000"),
++                "kind" => input["kind"] = json!(255),
++                "scope" => input["scope_name"] = json!(""),
++                "end" => input["end_unix_nanos"] = json!("1"),
++                "timestamp" => input["start_unix_nanos"] = json!("18446744073709551616"),
++                "integer" => input["attributes"]["maximum"]["value"] = json!("9223372036854775808"),
++                _ => unreachable!(),
++            }
++            let parsed: Span = serde_json::from_value(input).unwrap();
++            assert!(parsed.into_otel().is_err(), "{case}");
++        }
++    }
++
++    #[test]
++    fn tracing_http_features_preserve_blocking_protobuf_metrics() {
++        use std::{
++            io::{Read, Write},
++            net::TcpListener,
++            thread,
++        };
++        use temporalio_common::telemetry::{
++            OtelCollectorOptions, OtlpProtocol, build_otlp_metric_exporter, metrics::CoreMeter,
++        };
++        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
++        let address = listener.local_addr().unwrap();
++        listener.set_nonblocking(true).unwrap();
++        let receiver = thread::spawn(move || {
++            let deadline = Instant::now() + Duration::from_secs(5);
++            let mut stream = loop {
++                match listener.accept() {
++                    Ok((stream, _)) => break stream,
++                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
++                        assert!(Instant::now() < deadline, "metrics reader failed to export");
++                        thread::sleep(Duration::from_millis(10));
++                    }
++                    Err(error) => panic!("metrics receiver failed: {error}"),
++                }
++            };
++            stream
++                .set_read_timeout(Some(Duration::from_secs(3)))
++                .unwrap();
++            let mut bytes = Vec::new();
++            let header_end = loop {
++                let mut chunk = [0; 4096];
++                let size = stream.read(&mut chunk).unwrap();
++                assert!(
++                    size > 0 && bytes.len() < 65536,
++                    "invalid metrics HTTP headers"
++                );
++                bytes.extend_from_slice(&chunk[..size]);
++                if let Some(position) = bytes.windows(4).position(|part| part == b"\r\n\r\n") {
++                    break position + 4;
++                }
++            };
++            let headers = String::from_utf8_lossy(&bytes[..header_end]).to_lowercase();
++            assert!(
++                headers.contains("content-type: application/x-protobuf"),
++                "metrics protocol changed"
++            );
++            let size: usize = headers
++                .lines()
++                .find_map(|line| line.strip_prefix("content-length:"))
++                .unwrap()
++                .trim()
++                .parse()
++                .unwrap();
++            assert!(size > 0 && size < 1048576);
++            while bytes.len() < header_end + size {
++                let mut chunk = [0; 4096];
++                let size = stream.read(&mut chunk).unwrap();
++                assert!(size > 0);
++                bytes.extend_from_slice(&chunk[..size]);
++            }
++            stream
++                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
++                .unwrap();
++            bytes[header_end..header_end + size].to_vec()
++        });
++        let options = OtelCollectorOptions::builder()
++            .url(format!("http://{address}/v1/metrics").parse().unwrap())
++            .protocol(OtlpProtocol::Http)
++            .metric_periodicity(Duration::from_millis(100))
++            .build();
++        let meter = build_otlp_metric_exporter(options).unwrap();
++        let counter = meter.counter("temporal_trace_feature_guard".into());
++        let attributes = meter.new_attributes(Default::default());
++        counter.add(1, &attributes);
++        let body = receiver.join().unwrap();
++        assert!(
++            body.windows(b"temporal_trace_feature_guard".len())
++                .any(|part| part == b"temporal_trace_feature_guard")
++        );
++        drop(counter);
++        drop(attributes);
++        drop(meter);
++    }
++
++    #[test]
++    fn standalone_exporters_initialize_without_a_temporal_client() {
++        for protocol in ["grpc", "http/protobuf", "http/json"] {
++            let config = json!({"endpoint":"http://127.0.0.1:1/v1/traces", "protocol":protocol, "timeout_millis":100, "service_name":"trace-fixture"}).to_string();
++            let result =
++                temporal_core_trace_exporter_new(std::ptr::null_mut(), config.as_str().into());
++            if !result.failure.is_null() {
++                let message = unsafe { CStr::from_ptr(result.failure) }
++                    .to_string_lossy()
++                    .to_string();
++                temporal_core_trace_string_free(result.failure);
++                panic!("{protocol}: {message}");
++            }
++            assert!(!result.exporter.is_null());
++            temporal_core_trace_exporter_free(result.exporter);
++        }
++    }
++
++    #[test]
++    fn invalid_ffi_buffers_and_owned_error_strings_are_bounded() {
++        let null = ByteArrayRef {
++            data: std::ptr::null(),
++            size: 1,
++        };
++        assert!(input_json::<Vec<Span>>(null, 1024).is_err());
++        let empty = ByteArrayRef::empty();
++        assert!(input_json::<Vec<Span>>(empty, 1024).is_err());
++        let message = failure("private\0diagnostic");
++        assert_eq!(
++            unsafe { CStr::from_ptr(message) }.to_str().unwrap(),
++            "private\\0diagnostic"
++        );
++        temporal_core_trace_string_free(message);
++        let error =
++            temporal_core_trace_exporter_export(std::ptr::null_mut(), ByteArrayRef::empty(), 1);
++        assert!(!error.is_null());
++        temporal_core_trace_string_free(error);
++        temporal_core_trace_exporter_free(std::ptr::null_mut());
++    }
++}

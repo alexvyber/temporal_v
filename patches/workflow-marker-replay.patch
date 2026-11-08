@@ -1,0 +1,236 @@
+diff --git a/crates/sdk-core/src/worker/workflow/machines/workflow_machines.rs b/crates/sdk-core/src/worker/workflow/machines/workflow_machines.rs
+--- a/crates/sdk-core/src/worker/workflow/machines/workflow_machines.rs
++++ b/crates/sdk-core/src/worker/workflow/machines/workflow_machines.rs
+@@ -123,6 +123,8 @@
+     /// queries) to receive a history with no new workflow tasks. If the last history we processed
+     /// also had no new tasks, we need a way to know not to apply the same events over again.
+     pub(crate) last_processed_event: i64,
++    /// Highest history event scanned for opaque language marker notifications.
++    last_workflow_marker_scan_event_id: i64,
+     /// True if the workflow is replaying from history
+     pub(crate) replaying: bool,
+     /// Legacy queries cannot produce commands, so catching up on their history must not cause any
+@@ -317,6 +319,7 @@
+             current_started_event_id: 0,
+             next_started_event_id: 0,
+             last_processed_event: 0,
++            last_workflow_marker_scan_event_id: 0,
+             workflow_start_time: None,
+             workflow_end_time: None,
+             wft_start_time: None,
+@@ -898,6 +901,33 @@
+             self.last_processed_event = eid;
+         }
+ 
++        // An LA marker can be committed by a heartbeat before its language callback runs.
++        // Its following SideEffect therefore belongs to a later WFT. Opaque values must be
++        // available before replaying that callback, even when Core coalesces those WFTs.
++        // Scan each fetched event once; do not repeatedly clone future marker payloads.
++        let events = self.last_history_from_server.get_events();
++        let first_unscanned = events
++            .partition_point(|event| event.event_id <= self.last_workflow_marker_scan_event_id);
++        for event in &events[first_unscanned..] {
++            if let Some(history_event::Attributes::MarkerRecordedEventAttributes(marker)) =
++                &event.attributes
++                && is_workflow_marker(&marker.marker_name)
++            {
++                self.drive_me.send_job(
++                    workflow_activation_job::Variant::NotifyWorkflowMarker(NotifyWorkflowMarker {
++                        marker_name: marker.marker_name.clone(),
++                        details: marker.details.clone(),
++                        event_id: event.event_id,
++                    })
++                    .into(),
++                );
++            }
++        }
++        if let Some(last) = events.last() {
++            self.last_workflow_marker_scan_event_id =
++                self.last_workflow_marker_scan_event_id.max(last.event_id);
++        }
++
+         // Needed to delay mutation of self until after we've iterated over peeked events.
+         #[allow(clippy::large_enum_variant)]
+         enum DelayedAction {
+@@ -931,18 +961,6 @@
+                 self.drive_me.send_job(
+                     workflow_activation_job::Variant::NotifyHasPatch(NotifyHasPatch { patch_id })
+                         .into(),
+-                );
+-            } else if let Some(history_event::Attributes::MarkerRecordedEventAttributes(atts)) =
+-                &e.attributes
+-                && is_workflow_marker(&atts.marker_name)
+-            {
+-                self.drive_me.send_job(
+-                    workflow_activation_job::Variant::NotifyWorkflowMarker(NotifyWorkflowMarker {
+-                        marker_name: atts.marker_name.clone(),
+-                        details: atts.details.clone(),
+-                        event_id: e.event_id,
+-                    })
+-                    .into(),
+                 );
+             } else if e.is_local_activity_marker() {
+                 if let Some(la_dat) = e.clone().into_local_activity_marker_details() {
+diff --git a/crates/sdk-core/src/worker/workflow/history_update.rs b/crates/sdk-core/src/worker/workflow/history_update.rs
+--- a/crates/sdk-core/src/worker/workflow/history_update.rs
++++ b/crates/sdk-core/src/worker/workflow/history_update.rs
+@@ -1,5 +1,5 @@
+ use crate::{
+-    protosext::ValidPollWFTQResponse,
++    protosext::{HistoryEventExt, ValidPollWFTQResponse},
+     worker::{
+         client::WorkerClient,
+         workflow::{CacheMissFetchReq, PermittedWFT, PreparedWFT},
+@@ -279,6 +279,21 @@
+                 );
+                 return Err(EMPTY_FETCH_ERR.clone());
+             }
++            // Synchronous language-side SideEffect reads may follow an LA resolution whose
++            // marker was committed in an earlier WFT. Fetch its future value before exposing
++            // the LA to lang. A first SideEffect may occur only after that LA, so LA markers
++            // must trigger this as well. Histories without either kind retain streaming.
++            let needs_language_marker_lookahead = current_events.iter().any(|event| {
++                event.is_local_activity_marker()
++                    || matches!(&event.attributes,
++                        Some(Attributes::MarkerRecordedEventAttributes(marker))
++                        if matches!(marker.marker_name.as_str(), "SideEffect" | "MutableSideEffect"))
++            });
++            if !no_next_page && needs_language_marker_lookahead {
++                self.event_queue.extend(current_events);
++                continue;
++            }
++
+             let first_event_id = current_events.front().unwrap().event_id;
+             // We only *really* have the last WFT if the events go all the way up to at least the
+             // WFT started event id. Otherwise we somehow still have partial history.
+@@ -1005,6 +1020,35 @@
+ 
+     #[rstest::rstest]
+     #[tokio::test]
++    async fn paginator_fetches_future_side_effect_after_local_activity(
++        #[values(2, 5, 7)] chunk_size: usize,
++    ) {
++        let mut history = TestHistoryBuilder::default();
++        history.add_by_type(EventType::WorkflowExecutionStarted);
++        history.add_full_wf_task();
++        // There need not be any earlier language marker to tell Core which language API follows.
++        history.add_local_activity_result_marker(1, "1", "done".into());
++        history.add_full_wf_task();
++        history.add(
++            temporalio_common::protos::temporal::api::history::v1::MarkerRecordedEventAttributes {
++                marker_name: "SideEffect".to_string(),
++                workflow_task_completed_event_id: 8,
++                ..Default::default()
++            },
++        );
++        history.add_we_signaled("finish", vec![]);
++        history.add_full_wf_task();
++        history.add_workflow_execution_completed();
++        let mut paginator = paginator_setup(history, chunk_size);
++        let update = paginator.extract_next_update().await.unwrap();
++        assert!(update.get_events().iter().any(|event| matches!(&event.attributes,
++            Some(Attributes::MarkerRecordedEventAttributes(marker)) if marker.marker_name == "SideEffect")),
++            "History pagination exposed an LA before fetching its later SideEffect value");
++        assert!(update.has_last_wft);
++    }
++
++    #[rstest::rstest]
++    #[tokio::test]
+     async fn paginator_extracts_updates(#[values(10, 11, 12, 13, 14)] chunk_size: usize) {
+         let wft_count = 100;
+         let mut paginator = paginator_setup(
+diff --git a/crates/sdk-core/src/worker/workflow/machines/workflow_marker_state_machine.rs b/crates/sdk-core/src/worker/workflow/machines/workflow_marker_state_machine.rs
+--- a/crates/sdk-core/src/worker/workflow/machines/workflow_marker_state_machine.rs
++++ b/crates/sdk-core/src/worker/workflow/machines/workflow_marker_state_machine.rs
+@@ -276,4 +276,77 @@
+         )));
+         core.complete_execution(&activation.run_id).await;
+     }
+-}
++    #[tokio::test]
++    async fn workflow_marker_follows_local_activity_across_heartbeat_boundary() {
++        use crate::test_help::schedule_local_activity_cmd;
++        use std::time::Duration;
++        use temporalio_common::protos::coresdk::workflow_commands::ActivityCancellationType;
++        let mut history = TestHistoryBuilder::default();
++        history.add_by_type(EventType::WorkflowExecutionStarted);
++        history.add_full_wf_task();
++        history.add(MarkerRecordedEventAttributes {
++            marker_name: "SideEffect".to_string(),
++            details: details(),
++            workflow_task_completed_event_id: 4,
++            ..Default::default()
++        });
++        history.add_local_activity_result_marker(1, "1", "done".into());
++        // Core can commit the LA marker while its language resolution waits for the next WFT.
++        history.add_full_wf_task();
++        history.add(MarkerRecordedEventAttributes {
++            marker_name: "SideEffect".to_string(),
++            details: details(),
++            workflow_task_completed_event_id: 9,
++            ..Default::default()
++        });
++        history.add_we_signaled("finish", vec![]);
++        history.add_full_wf_task();
++        history.add_workflow_execution_completed();
++        let mock = MockPollCfg::from_resp_batches(
++            "marker-heartbeat",
++            history,
++            [ResponseType::ToTaskNum(3)],
++            mock_worker_client(),
++        );
++        let core = mock_worker(build_mock_pollers(mock));
++        let activation = core.poll_workflow_activation().await.unwrap();
++        let mut second_value_available = activation.jobs.iter().any(|job| matches!(&job.variant,
++            Some(workflow_activation_job::Variant::NotifyWorkflowMarker(marker)) if marker.event_id == 10));
++        core.complete_workflow_activation(WorkflowActivationCompletion::from_cmds(
++            activation.run_id,
++            vec![
++                attributes("SideEffect").into(),
++                schedule_local_activity_cmd(
++                    1,
++                    "1",
++                    ActivityCancellationType::TryCancel,
++                    Duration::from_secs(10),
++                )
++                .into(),
++            ],
++        ))
++        .await
++        .unwrap();
++        let activation = core.poll_workflow_activation().await.unwrap();
++        second_value_available |= activation.jobs.iter().any(|job| matches!(&job.variant,
++            Some(workflow_activation_job::Variant::NotifyWorkflowMarker(marker)) if marker.event_id == 10));
++        assert!(activation.jobs.iter().any(|job| matches!(
++            &job.variant,
++            Some(workflow_activation_job::Variant::ResolveActivity(_))
++        )));
++        assert!(
++            second_value_available,
++            "LA callback ran before its durable SideEffect value from the next WFT was available"
++        );
++        core.complete_workflow_activation(WorkflowActivationCompletion::from_cmds(
++            activation.run_id,
++            vec![attributes("SideEffect").into()],
++        ))
++        .await
++        .unwrap();
++        let activation = core.poll_workflow_activation().await.unwrap();
++        assert!(activation.jobs.iter().any(|job| matches!(&job.variant,
++            Some(workflow_activation_job::Variant::SignalWorkflow(signal)) if signal.signal_name == "finish")));
++        core.complete_execution(&activation.run_id).await;
++    }
++}
+diff --git a/crates/sdk-core-c-bridge/src/lib.rs b/crates/sdk-core-c-bridge/src/lib.rs
+--- a/crates/sdk-core-c-bridge/src/lib.rs
++++ b/crates/sdk-core-c-bridge/src/lib.rs
+@@ -26,7 +26,8 @@
+ /// older libraries cannot silently discard workflow commands or miss exporters.
+ #[unsafe(no_mangle)]
+ pub extern "C" fn temporal_core_protocol_capabilities() -> u64 {
+-    3
++    // Marker commands, tracing, and cross-task/paginated marker replay lookahead.
++    7
+ }
+ 
+ #[repr(C)]

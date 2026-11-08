@@ -1,0 +1,46 @@
+--- a/crates/sdk-core/src/worker/client.rs
++++ b/crates/sdk-core/src/worker/client.rs
+@@ -23,7 +23,10 @@
+ };
+ use temporalio_common::protos::{
+     TaskToken,
+-    coresdk::{workflow_commands::QueryResult, workflow_completion},
++    coresdk::{
++        workflow_commands::{QueryResult, query_result},
++        workflow_completion,
++    },
+     google::rpc::Status as RpcStatus,
+     temporal::api::{
+         command::v1::Command,
+@@ -624,6 +627,10 @@
+                 .query_responses
+                 .into_iter()
+                 .map(|qr| {
++                    let failure = match qr.variant.as_ref() {
++                        Some(query_result::Variant::Failed(failure)) => Some(failure.clone()),
++                        _ => None,
++                    };
+                     let (id, completed_type, query_result, error_message) = qr.into_components();
+                     (
+                         id,
+@@ -631,8 +638,7 @@
+                             result_type: completed_type as i32,
+                             answer: query_result,
+                             error_message,
+-                            // TODO: https://github.com/temporalio/sdk-core/issues/867
+-                            failure: None,
++                            failure,
+                         },
+                     )
+                 })
+@@ -971,6 +977,10 @@
+                 (legacy_query_failure(f), cause)
+             }
+         };
++        // A successfully handled legacy query can itself return an application failure.
++        if let Some(query_result::Variant::Failed(query_failure)) = query_result.variant.as_ref() {
++            failure = Some(query_failure.clone());
++        }
+         let (_, completed_type, query_result, error_message) = query_result.into_components();
+ 
+         Ok(self

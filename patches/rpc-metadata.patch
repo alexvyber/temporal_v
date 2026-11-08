@@ -1,0 +1,333 @@
+diff --git a/crates/sdk-core-c-bridge/src/client.rs b/crates/sdk-core-c-bridge/src/client.rs
+--- a/crates/sdk-core-c-bridge/src/client.rs
++++ b/crates/sdk-core-c-bridge/src/client.rs
+@@ -6,7 +6,6 @@
+ use prost::bytes::Bytes;
+ use std::{
+     cell::OnceCell,
+-    str::FromStr,
+     sync::{
+         Arc,
+         atomic::{AtomicBool, Ordering},
+@@ -141,10 +140,12 @@
+     // Convert opts
+     let options = unsafe { &*options };
+     // Option conversion can fail before a callback service is constructed.
+-    let callback_user_data = options.grpc_override_callback.map(|_| Arc::new(GrpcOverrideUserData {
+-        value: UserDataHandle(options.grpc_override_callback_user_data),
+-        free: options.grpc_override_callback_user_data_free,
+-    }));
++    let callback_user_data = options.grpc_override_callback.map(|_| {
++        Arc::new(GrpcOverrideUserData {
++            value: UserDataHandle(options.grpc_override_callback_user_data),
++            free: options.grpc_override_callback_user_data_free,
++        })
++    });
+     let mut connection_options: temporalio_client::ConnectionOptions = match options.try_into() {
+         Ok(v) => v,
+         Err(err) => {
+@@ -239,10 +240,7 @@
+                     .tokio_handle()
+                     .spawn_blocking(move || unsafe {
+                         reached_user_code_clone.store(true, Ordering::Relaxed);
+-                        cb(
+-                            req_ptr as *mut ClientGrpcOverrideRequest,
+-                            user_data.value.0,
+-                        );
++                        cb(req_ptr as *mut ClientGrpcOverrideRequest, user_data.value.0);
+                     })
+                     .await;
+                 if let Err(err) = spawn_ret {
+@@ -315,7 +313,8 @@
+     unsafe extern "C" fn(request: *mut ClientGrpcOverrideRequest, user_data: *mut libc::c_void),
+ >;
+ 
+-pub type ClientGrpcOverrideUserDataFreeCallback = Option<unsafe extern "C" fn(user_data: *mut libc::c_void)>;
++pub type ClientGrpcOverrideUserDataFreeCallback =
++    Option<unsafe extern "C" fn(user_data: *mut libc::c_void)>;
+ 
+ struct GrpcOverrideUserData {
+     value: UserDataHandle,
+@@ -484,14 +483,21 @@
+     }
+ 
+     fn client_headers_from_metadata_ref(headers: MetadataRef) -> Result<http::HeaderMap, String> {
+-        let key_values = headers.to_vec_map_on_newlines();
+-        let mut header_map = http::HeaderMap::with_capacity(key_values.len());
+-        for (k, v) in key_values.into_iter() {
+-            let name = http::HeaderName::try_from(&k)
+-                .map_err(|e| format!("Invalid header name '{k}': {e}"))?;
+-            let value = http::HeaderValue::from_bytes(v.as_slice())
+-                .map_err(|e| format!("Invalid header value '{v:?}': {e}"))?;
+-            header_map.insert(name, value);
++        let mut header_map = http::HeaderMap::with_capacity(headers.size);
++        if headers.size > 0 {
++            for entry in headers.to_slice() {
++                let bytes = entry.to_slice();
++                let separator = bytes
++                    .iter()
++                    .position(|&byte| byte == b'\n')
++                    .ok_or_else(|| "Invalid metadata entry".to_string())?;
++                let name = http::HeaderName::from_bytes(&bytes[..separator])
++                    .map_err(|_| "Invalid metadata name".to_string())?;
++                let value = http::HeaderValue::from_bytes(&bytes[separator + 1..])
++                    .map_err(|_| "Invalid metadata value".to_string())?;
++                // A map conversion loses repeated user metadata before Tonic receives it.
++                header_map.append(name, value);
++            }
+         }
+         Ok(header_map)
+     }
+@@ -623,12 +629,12 @@
+ macro_rules! rpc_call_on_trait {
+     ($client:ident, $call:ident, $trait:tt, $call_name:ident) => {
+         if $call.retry {
+-            rpc_resp($trait::$call_name(&mut $client, rpc_req($call)?).await)
+-        } else {
+-            // Disable retries for this call
+-            *$client.retry_options_mut() = RetryOptions::no_retries();
+-            rpc_resp($trait::$call_name(&mut $client, rpc_req($call)?).await)
+-        }
++                    rpc_resp($trait::$call_name(&mut $client, rpc_req($call)?).await)
++                } else {
++                    // Disable retries for this call
++                    *$client.retry_options_mut() = RetryOptions::no_retries();
++                    rpc_resp($trait::$call_name(&mut $client, rpc_req($call)?).await)
++                }
+     };
+ }
+ 
+@@ -1419,16 +1425,28 @@
+     let proto = P::decode(call.req.to_slice())?;
+     let mut req = tonic::Request::new(proto);
+     if call.metadata.size > 0 {
+-        for (k, v) in call.metadata.to_string_map_on_newlines() {
+-            req.metadata_mut()
+-                .insert(MetadataKey::from_str(k.as_str())?, v.parse()?);
++        for entry in call.metadata.to_slice() {
++            let bytes = entry.to_slice();
++            let separator = bytes
++                .iter()
++                .position(|&byte| byte == b'\n')
++                .ok_or_else(|| anyhow::anyhow!("Invalid metadata entry"))?;
++            req.metadata_mut().append(
++                MetadataKey::from_bytes(&bytes[..separator])?,
++                MetadataValue::try_from(&bytes[separator + 1..])?,
++            );
+         }
+     }
+     if call.binary_metadata.size > 0 {
+-        for (k, v) in call.binary_metadata.to_vec_map_on_newlines() {
+-            req.metadata_mut().insert_bin(
+-                MetadataKey::from_str(k.as_str())?,
+-                MetadataValue::from_bytes(v.as_slice()),
++        for entry in call.binary_metadata.to_slice() {
++            let bytes = entry.to_slice();
++            let separator = bytes
++                .iter()
++                .position(|&byte| byte == b'\n')
++                .ok_or_else(|| anyhow::anyhow!("Invalid binary metadata entry"))?;
++            req.metadata_mut().append_bin(
++                MetadataKey::from_bytes(&bytes[..separator])?,
++                MetadataValue::from_bytes(&bytes[separator + 1..]),
+             );
+         }
+     }
+@@ -1609,6 +1627,56 @@
+     use super::*;
+     use crate::ByteArrayRefArray;
+ 
++    #[test]
++    fn rpc_metadata_preserves_repeated_ascii_binary_and_response_headers() {
++        let ascii = [
++            ByteArrayRef::from("x-repeat\none"),
++            ByteArrayRef::from("x-repeat\ntwo"),
++        ];
++        let binary_one = b"x-repeat-bin\n\x00\xff".to_vec();
++        let binary_two = b"x-repeat-bin\n\x80\n".to_vec();
++        let binary = [
++            ByteArrayRef::from(&binary_one),
++            ByteArrayRef::from(&binary_two),
++        ];
++        let call = RpcCallOptions {
++            service: RpcService::Health,
++            rpc: "Check".into(),
++            req: ByteArrayRef::empty(),
++            retry: false,
++            metadata: (&ascii[..]).into(),
++            binary_metadata: (&binary[..]).into(),
++            timeout_millis: 0,
++            cancellation_token: std::ptr::null(),
++        };
++        let request =
++            rpc_req::<temporalio_common::protos::grpc::health::v1::HealthCheckRequest>(&call)
++                .unwrap();
++        let values: Vec<_> = request
++            .metadata()
++            .get_all("x-repeat")
++            .iter()
++            .map(|value| value.to_str().unwrap())
++            .collect();
++        assert_eq!(values, ["one", "two"]);
++        let values: Vec<_> = request
++            .metadata()
++            .get_all_bin("x-repeat-bin")
++            .iter()
++            .map(|value| value.to_bytes().unwrap().to_vec())
++            .collect();
++        assert_eq!(values, [vec![0, 255], vec![128, 10]]);
++        let headers =
++            ClientGrpcOverrideResponse::client_headers_from_metadata_ref((&ascii[..]).into())
++                .unwrap();
++        let values: Vec<_> = headers
++            .get_all("x-repeat")
++            .iter()
++            .map(|value| value.to_str().unwrap())
++            .collect();
++        assert_eq!(values, ["one", "two"]);
++    }
++
+     fn base_connection_options() -> ConnectionOptions {
+         ConnectionOptions {
+             target_url: "http://localhost:7233".into(),
+diff --git a/crates/client/src/grpc.rs b/crates/client/src/grpc.rs
+--- a/crates/client/src/grpc.rs
++++ b/crates/client/src/grpc.rs
+@@ -30,10 +30,7 @@
+     telemetry::metrics::MetricKeyValue,
+ };
+ use tonic::{
+-    Request, Response, Status,
+-    body::Body,
+-    client::GrpcService,
+-    metadata::{AsciiMetadataValue, KeyAndValueRef},
++    Request, Response, Status, body::Body, client::GrpcService, metadata::AsciiMetadataValue,
+ };
+ 
+ /// Something that has access to the raw grpc services
+@@ -176,17 +173,8 @@
+ fn req_cloner<T: Clone>(cloneme: &Request<T>) -> Request<T> {
+     let msg = cloneme.get_ref().clone();
+     let mut new_req = Request::new(msg);
+-    let new_met = new_req.metadata_mut();
+-    for kv in cloneme.metadata().iter() {
+-        match kv {
+-            KeyAndValueRef::Ascii(k, v) => {
+-                new_met.insert(k, v.clone());
+-            }
+-            KeyAndValueRef::Binary(k, v) => {
+-                new_met.insert_bin(k, v.clone());
+-            }
+-        }
+-    }
++    // Retry clones must retain all values, including repeated binary metadata.
++    *new_req.metadata_mut() = cloneme.metadata().clone();
+     *new_req.extensions_mut() = cloneme.extensions().clone();
+     new_req
+ }
+@@ -525,19 +513,19 @@
+ macro_rules! proxy_def {
+     ($client_type:tt, $client_meth:ident, $method:ident, $req:ty, $resp:ty, defaults) => {
+         #[doc = concat!("See [", stringify!($client_type), "::", stringify!($method), "]")]
+-        fn $method(
+-            &mut self,
+-            _request: tonic::Request<$req>,
+-        ) -> BoxFuture<'_, Result<tonic::Response<$resp>, tonic::Status>> {
+-            async { Ok(tonic::Response::new(<$resp>::default())) }.boxed()
+-        }
++                fn $method(
++                    &mut self,
++                    _request: tonic::Request<$req>,
++                ) -> BoxFuture<'_, Result<tonic::Response<$resp>, tonic::Status>> {
++                    async { Ok(tonic::Response::new(<$resp>::default())) }.boxed()
++                }
+     };
+     ($client_type:tt, $client_meth:ident, $method:ident, $req:ty, $resp:ty) => {
+         #[doc = concat!("See [", stringify!($client_type), "::", stringify!($method), "]")]
+-        fn $method(
+-            &mut self,
+-            _request: tonic::Request<$req>,
+-        ) -> BoxFuture<'_, Result<tonic::Response<$resp>, tonic::Status>>;
++                fn $method(
++                    &mut self,
++                    _request: tonic::Request<$req>,
++                ) -> BoxFuture<'_, Result<tonic::Response<$resp>, tonic::Status>>;
+     };
+ }
+ 
+@@ -687,18 +675,18 @@
+ 
+ macro_rules! namespaced_request {
+     ($req:ident) => {{
+-        let ns_str = $req.get_ref().namespace.clone();
+-        // Attach namespace header
+-        $req.metadata_mut().insert(
+-            TEMPORAL_NAMESPACE_HEADER_KEY,
+-            ns_str.parse().unwrap_or_else(|e| {
+-                warn!("Unable to parse namespace for header: {e:?}");
+-                AsciiMetadataValue::from_static("")
+-            }),
+-        );
+-        // Init metric labels
+-        AttachMetricLabels::namespace(ns_str)
+-    }};
++            let ns_str = $req.get_ref().namespace.clone();
++            // Attach namespace header
++            $req.metadata_mut().insert(
++                TEMPORAL_NAMESPACE_HEADER_KEY,
++                ns_str.parse().unwrap_or_else(|e| {
++                    warn!("Unable to parse namespace for header: {e:?}");
++                    AsciiMetadataValue::from_static("")
++                }),
++            );
++            // Init metric labels
++            AttachMetricLabels::namespace(ns_str)
++        }};
+ }
+ 
+ // Nice little trick to avoid the callsite asking to type the closure parameter
+@@ -2051,6 +2039,44 @@
+     use uuid::Uuid;
+ 
+     #[test]
++    fn req_cloner_preserves_repeated_rpc_metadata() {
++        let mut request = Request::new(());
++        request
++            .metadata_mut()
++            .append("x-repeat", "one".parse().unwrap());
++        request
++            .metadata_mut()
++            .append("x-repeat", "two".parse().unwrap());
++        request.metadata_mut().append_bin(
++            "x-repeat-bin",
++            tonic::metadata::MetadataValue::from_bytes(&[0, 255]),
++        );
++        request.metadata_mut().append_bin(
++            "x-repeat-bin",
++            tonic::metadata::MetadataValue::from_bytes(&[128, 10]),
++        );
++        request.metadata_mut().append_bin(
++            "x-repeat-bin",
++            tonic::metadata::MetadataValue::from_bytes(&[]),
++        );
++        let cloned = req_cloner(&request);
++        let ascii: Vec<_> = cloned
++            .metadata()
++            .get_all("x-repeat")
++            .iter()
++            .map(|value| value.to_str().unwrap())
++            .collect();
++        assert_eq!(ascii, ["one", "two"]);
++        let binary: Vec<_> = cloned
++            .metadata()
++            .get_all_bin("x-repeat-bin")
++            .iter()
++            .map(|value| value.to_bytes().unwrap().to_vec())
++            .collect();
++        assert_eq!(binary, [vec![0, 255], vec![128, 10], vec![]]);
++    }
++
++    #[test]
+     fn payload_limits_warn_only_vs_error() {
+         use temporalio_common::protos::temporal::api::{
+             common::v1::{Payload, Payloads},

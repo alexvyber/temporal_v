@@ -1,0 +1,23 @@
+diff --git a/crates/sdk-core-c-bridge/src/runtime.rs b/crates/sdk-core-c-bridge/src/runtime.rs
+--- a/crates/sdk-core-c-bridge/src/runtime.rs
++++ b/crates/sdk-core-c-bridge/src/runtime.rs
+@@ -21,7 +21,7 @@ use temporalio_common::{
+     },
+     telemetry::{
+         Base2ExponentialHistogramOptions, CoreLog, CoreLogConsumer, HistogramAggregation,
+-        HistogramBucketOverrides, Logger, MetricTemporality, OtelCollectorOptions,
++        HistogramBucketOverrides, Logger, MetricTemporality, OtelCollectorOptions, OtlpProtocol,
+         PrometheusExporterOptions, TelemetryOptions as CoreTelemetryOptions,
+         build_otlp_metric_exporter, metrics::CoreMeter, start_prometheus_metric_exporter,
+     },
+@@ -505,6 +505,10 @@ fn create_meter(
+             OtelCollectorOptions::builder()
+                 .url(Url::parse(otel_options.url.to_str())?)
+                 .headers(otel_options.headers.to_string_map_on_newlines())
++                .protocol(match otel_options.protocol {
++                    OpenTelemetryProtocol::Grpc => OtlpProtocol::Grpc,
++                    OpenTelemetryProtocol::Http => OtlpProtocol::Http,
++                })
+                 .metric_temporality(match otel_options.metric_temporality {
+                     OpenTelemetryMetricTemporality::Cumulative => MetricTemporality::Cumulative,
+                     OpenTelemetryMetricTemporality::Delta => MetricTemporality::Delta,

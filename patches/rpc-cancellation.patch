@@ -1,0 +1,33 @@
+--- a/crates/sdk-core-c-bridge/src/client.rs
++++ b/crates/sdk-core-c-bridge/src/client.rs
+@@ -510,13 +510,23 @@
+ macro_rules! service_call {
+     ($service_fn:ident, $client:ident, $options:ident, $cancel_token:ident) => {{
+         let call_future = $service_fn(&$client.core, &$options);
+-        if let Some(cancel_token) = $cancel_token {
+-            tokio::select! {
+-                _ = cancel_token.cancelled() => Err(anyhow::anyhow!("Cancelled")),
+-                v = call_future => v,
+-            }
+-        } else {
+-            call_future.await
++        // A request timeout alone restarts on each retry, so bound the whole retry future too.
++        tokio::select! {
++            _ = async {
++                if $options.timeout_millis == 0 {
++                    std::future::pending::<()>().await;
++                } else {
++                    tokio::time::sleep(Duration::from_millis(u64::from($options.timeout_millis))).await;
++                }
++            } => Err(tonic::Status::deadline_exceeded("RPC deadline exceeded").into()),
++            _ = async {
++                if let Some(cancel_token) = $cancel_token {
++                    cancel_token.cancelled().await;
++                } else {
++                    std::future::pending::<()>().await;
++                }
++            } => Err(tonic::Status::cancelled("RPC cancelled").into()),
++            v = call_future => v,
+         }
+     }};
+ }

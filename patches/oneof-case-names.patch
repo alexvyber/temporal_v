@@ -1,0 +1,88 @@
+--- a/gen/codegen.v
++++ b/gen/codegen.v
+@@ -651,7 +651,7 @@
+ 				continue
+ 			}
+ 			info := g.field_info(scope, vname, fld)!
+-			at := '${vname}_${camel(fld.name)}'
++			at := '${vname}_${camel(fld.name)}_Case'
+ 			arm_types << at
+ 			box := if info.kind == .message && g.is_boxed(scope, fld.number) { '&' } else { '' }
+ 			b.writeln('')
+@@ -894,6 +894,16 @@
+ 		}
+ 		else {}
+ 	}
++}
++
++// A one-member V type alias is not a sum type, so it cannot use `is`.
++fn (g &Gen) oneof_condition(vname string, fld Field, value string) string {
++    loc := g.locs[vname] or { panic('missing message location: ${vname}') }
++    members := loc.msg.fields.filter(it.oneof == fld.oneof)
++    if members.len == 1 {
++        return 'true'
++    }
++    return '${value} is ${vname}_${camel(fld.name)}_Case'
+ }
+ 
+ fn (mut g Gen) emit_encode_field(mut b strings.Builder, scope []string, vname string, fld Field) ! {
+@@ -907,7 +917,7 @@
+ 			.message { 'e.write_tag(${n}, .len_delim)\n\t\t\te.write_varint(u64(ov.value.encoded_size()))\n\t\t\tov.value.encode_to(mut e)' }
+ 		}
+ 		b.writeln('\tif ov := m.${sanitize(fld.oneof)} {')
+-		b.writeln('\t\tif ov is ${vname}_${camel(fld.name)} {')
++		b.writeln('\t\tif ${g.oneof_condition(vname, fld, 'ov')} {')
+ 		b.writeln('\t\t\t${arm_write}')
+ 		b.writeln('\t\t}')
+ 		b.writeln('\t}')
+@@ -1035,7 +1045,7 @@
+ 			.message { 'protobuf.len_field_len(${n}, ov.value.encoded_size())' }
+ 		}
+ 		b.writeln('\tif ov := m.${sanitize(fld.oneof)} {')
+-		b.writeln('\t\tif ov is ${vname}_${camel(fld.name)} {')
++		b.writeln('\t\tif ${g.oneof_condition(vname, fld, 'ov')} {')
+ 		b.writeln('\t\t\tn += ${arm_size}')
+ 		b.writeln('\t\t}')
+ 		b.writeln('\t}')
+@@ -1135,7 +1145,7 @@
+ 	n := fld.number
+ 	if fld.oneof != '' {
+ 		of := sanitize(fld.oneof)
+-		arm := '${vname}_${camel(fld.name)}'
++		arm := '${vname}_${camel(fld.name)}_Case'
+ 		if info.kind == .message {
+ 			// a message oneof arm merges with a prior value of the SAME arm;
+ 			// a different prior arm is replaced (merge with empty = the new one)
+@@ -1143,7 +1153,7 @@
+ 			b.writeln('\t\t\t\tmv_${name} := d.read_view()!')
+ 			b.writeln('\t\t\t\tmut mb_${name} := []u8{}')
+ 			b.writeln('\t\t\t\tif cur := m.${of} {')
+-			b.writeln('\t\t\t\t\tif cur is ${arm} {')
++			b.writeln('\t\t\t\t\tif ${g.oneof_condition(vname, fld, 'cur')} {')
+ 			b.writeln('\t\t\t\t\t\tmb_${name} = cur.value.encode()')
+ 			b.writeln('\t\t\t\t\t}')
+ 			b.writeln('\t\t\t\t}')
+--- a/gen/json.v
++++ b/gen/json.v
+@@ -221,7 +221,7 @@
+ 	jn := field_json_name(fld)
+ 	if fld.oneof != '' {
+ 		b.writeln('\tif ov := m.${sanitize(fld.oneof)} {')
+-		b.writeln('\t\tif ov is ${vname}_${camel(fld.name)} {')
++		b.writeln('\t\tif ${g.oneof_condition(vname, fld, 'ov')} {')
+ 		b.writeln("\t\t\to['${jn}'] = ${g.json_field_emit(info, fld, 'ov.value')}")
+ 		b.writeln('\t\t}')
+ 		b.writeln('\t}')
+@@ -287,10 +287,10 @@
+ 		b.writeln('\t\t\t\t}')
+ 		if info.kind == .message && g.is_boxed(scope, fld.number) {
+ 			b.writeln('\t\t\t\tbox_${name} := ${g.json_field_parse(info, fld, 'jv')}')
+-			b.writeln('\t\t\t\tm.${sanitize(fld.oneof)} = ${vname}_${camel(fld.name)}{')
++			b.writeln('\t\t\t\tm.${sanitize(fld.oneof)} = ${vname}_${camel(fld.name)}_Case{')
+ 			b.writeln('\t\t\t\t\tvalue: &box_${name}')
+ 		} else {
+-			b.writeln('\t\t\t\tm.${sanitize(fld.oneof)} = ${vname}_${camel(fld.name)}{')
++			b.writeln('\t\t\t\tm.${sanitize(fld.oneof)} = ${vname}_${camel(fld.name)}_Case{')
+ 			b.writeln('\t\t\t\t\tvalue: ${g.json_field_parse(info, fld, 'jv')}')
+ 		}
+ 		b.writeln('\t\t\t\t}')

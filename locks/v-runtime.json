@@ -1,0 +1,8 @@
+{
+  "revision": "213eb9b920b91bcbb2d24c5b98a48d3f49137a42",
+  "file": "vlib/builtin/recover.c.v",
+  "original_sha256": "cbc393cfb4e10a6301791ae9648b6f650f1065ae4bdf065b27d48f20f86695fd",
+  "patched_sha256": "6e384e33e23c3d408eee8ae6448ffede7420676f3e273c030f4a51c5b494a655",
+  "patch": "patches/v-panic-stack.patch",
+  "patch_sha256": "391d4cce73499d847800c09cb9b00aaabc96799fa3cd989608718c9b4b3630f2"
+}

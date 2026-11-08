@@ -1,0 +1,18 @@
+--- a/crates/sdk-core-c-bridge/src/envconfig.rs
++++ b/crates/sdk-core-c-bridge/src/envconfig.rs
+@@ -103,6 +103,7 @@
+ 
+ #[derive(Serialize)]
+ struct ClientEnvConfigTLS {
++    disable_host_verification: bool,
+     #[serde(skip_serializing_if = "Option::is_none")]
+     disabled: Option<bool>,
+     #[serde(skip_serializing_if = "Option::is_none")]
+@@ -120,6 +121,7 @@
+ 
+     fn try_from(c: CoreClientConfigTLS) -> Result<Self, Self::Error> {
+         Ok(Self {
++            disable_host_verification: c.disable_host_verification,
+             disabled: c.disabled,
+             server_name: c.server_name,
+             server_ca_cert: c.server_ca_cert.map(TryInto::try_into).transpose()?,

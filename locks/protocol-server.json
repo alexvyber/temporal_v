@@ -1,0 +1,20 @@
+{
+  "cli_version": "1.9.4-time-skipping",
+  "server_revision": "69c692e8773e",
+  "release": "https://github.com/temporalio/cli/releases/tag/v1.9.4-time-skipping",
+  "checksums_source": "https://github.com/temporalio/cli/releases/download/v1.9.4-time-skipping/checksums.txt",
+  "assets": {
+    "darwin_arm64": {
+      "url": "https://github.com/temporalio/cli/releases/download/v1.9.4-time-skipping/temporal_cli_1.9.4-time-skipping_darwin_arm64.tar.gz",
+      "sha256": "6617df5c106536a620528fcf86d554c26f3d61f0fe6edbab47358bf5bd70d688"
+    },
+    "linux_amd64": {
+      "url": "https://github.com/temporalio/cli/releases/download/v1.9.4-time-skipping/temporal_cli_1.9.4-time-skipping_linux_amd64.tar.gz",
+      "sha256": "1ac1fccf7d142a018e96e77136aa3aeba3e899249aca97dab2d8dac96354e58c"
+    },
+    "linux_arm64": {
+      "url": "https://github.com/temporalio/cli/releases/download/v1.9.4-time-skipping/temporal_cli_1.9.4-time-skipping_linux_arm64.tar.gz",
+      "sha256": "e161d019d623db0e44c3a9fa6ad546621fe75551d6f707765297476273da194d"
+    }
+  }
+}

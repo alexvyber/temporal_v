@@ -1,0 +1,15 @@
+syntax = "proto3";
+package temporal.v.bootstrap;
+
+// Aggregate actual pinned schemas into one generation graph, without importing
+// HTTP/OpenAPI service annotations which are not part of protobuf messages.
+import "temporal/sdk/core/core_interface.proto";
+import "temporal/api/operatorservice/v1/request_response.proto";
+import "temporal/api/testservice/v1/request_response.proto";
+import "temporal/api/cloud/cloudservice/v1/request_response.proto";
+import "grpc/health/v1/health.proto";
+
+import "google/rpc/status.proto";
+import "temporal/api/errordetails/v1/message.proto";
+
+import "temporal/api/sdk/v1/external_storage.proto";
